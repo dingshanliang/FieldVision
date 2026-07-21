@@ -4,3 +4,11 @@
 *.db
 .beads-credential-key
 .beads/proxieddb/
+node_modules/
+dist/
+output/
+.playwright-cli/
+.DS_Store
+docs/.DS_Store
+.codegraph/
+*.tsbuildinfo

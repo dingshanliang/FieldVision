@@ -125,3 +125,12 @@ bd prime                # Refresh Beads context
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
+
+## FieldVision delivery rules
+
+- Read `docs/CODEX_TASK_3D_FARMLAND_DEMO.md` before changing product scope or visual priorities.
+- The cinematic 3D scene is the product. Do not let dashboard UI, CRUD, GIS, or backend work displace the A02 camera dive, drone scan, and irrigation recovery flow.
+- Hero-scene placeholders are not acceptable at completion. Prefer Blender-authored or carefully built procedural assets with believable scale, edges, materials, shadows, and motion.
+- External assets must have a clear license and be recorded in `ASSETS.md` before use.
+- Keep raw/authoring scripts under `scripts/`; keep browser-ready assets under `public/assets/`.
+- Run `pnpm typecheck`, `pnpm lint`, and `pnpm build` after implementation changes. Use a real browser for visual acceptance.
