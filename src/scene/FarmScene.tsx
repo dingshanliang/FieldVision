@@ -14,6 +14,8 @@ import { Terrain } from "./Terrain";
 import { GroundDetails } from "./GroundDetails";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { visualConfig } from "../config/visual";
+import { EvidencePrototypeScene } from "../prototype/evidence/EvidencePrototypeScene";
+import { useEvidenceProto } from "../prototype/evidence/useEvidenceProto";
 
 /** Cinematic shallow focus for the close-up beats; wide shots stay fully sharp. */
 function dofPreset(viewMode: string, demoStep: string) {
@@ -27,6 +29,7 @@ export function FarmScene() {
   const applyDemoState = useFarmStore((state) => state.applyDemoState);
   const viewMode = useFarmStore((state) => state.viewMode);
   const demoStep = useFarmStore((state) => state.demoStep);
+  const evidenceProto = useEvidenceProto((s) => s.enabled);
   const dof = dofPreset(viewMode, demoStep);
   return (
     <>
@@ -40,8 +43,14 @@ export function FarmScene() {
         <IrrigationTelemetry />
         <Facilities />
         <SafeDrone />
-        <RiskOverlay />
-        <SpatialEvidence />
+        {evidenceProto ? (
+          <EvidencePrototypeScene />
+        ) : (
+          <>
+            <RiskOverlay />
+            <SpatialEvidence />
+          </>
+        )}
       </group>
       <CameraDirector />
       {tier !== "low" && (

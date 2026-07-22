@@ -166,7 +166,9 @@ export function CameraDirector() {
     if (!current) return;
     if (!useFarmStore.getState().introComplete) return;
     // QA screenshot scripts drive the camera directly — never fight them.
-    if (new URLSearchParams(window.location.search).has("qa")) return;
+    // ?proto=* 同样冻结呼吸漂移，让原型机位稳定便于对比与截图。
+    const protoParams = new URLSearchParams(window.location.search);
+    if (protoParams.has("qa") || protoParams.has("proto")) return;
     const now = performance.now();
     if (transitioning.current) {
       // Arrival check by distance — immune to stale rest promises and to
