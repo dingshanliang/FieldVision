@@ -2,9 +2,9 @@ import { FarmCanvas } from "../scene/FarmCanvas";
 import { DemoTimeline } from "../ui/DemoTimeline";
 import { FieldDetailPanel } from "../ui/FieldDetailPanel";
 import { LayerSwitcher } from "../ui/LayerSwitcher";
+import { TimeCutCard } from "../ui/TimeCutCard";
 import { TopBar } from "../ui/TopBar";
 import { useFarmStore } from "../state/useFarmStore";
-import { EvidencePrototypeControls } from "../prototype/evidence/EvidencePrototypeControls";
 
 function AutoDemo() {
   const introComplete = useFarmStore((state) => state.introComplete);
@@ -13,9 +13,7 @@ function AutoDemo() {
   useEffect(() => {
     if (!introComplete || started.current) return;
     // QA harness: ?qa=1 disables autoplay so screenshot scripts can drive state directly.
-    // ?proto=* 同样关闭自动播放，交给原型控制条驱动状态。
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("qa") || params.has("proto")) return;
+    if (new URLSearchParams(window.location.search).has("qa")) return;
     started.current = true;
     const timer = window.setTimeout(() => void play(), 1200);
     return () => window.clearTimeout(timer);
@@ -33,7 +31,7 @@ export function App() {
       <LayerSwitcher />
       <FieldDetailPanel />
       <DemoTimeline />
-      <EvidencePrototypeControls />
+      <TimeCutCard />
       <div className="canvas-status" aria-live="polite">三维基地已就绪。可选择地块、切换图层或播放完整演示。</div>
     </main>
   );

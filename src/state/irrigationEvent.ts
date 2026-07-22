@@ -1,4 +1,5 @@
 import type { DemoStep, FieldStatus, LayerMode, ViewMode } from "../types/farm";
+import type { RecoveryPhase } from "./recoveryModel";
 
 export type IrrigationStage =
   | "idle"
@@ -32,6 +33,7 @@ export interface DemoStatePreset {
   irrigationProgress: number;
   scanProgress: number;
   fieldStatus: FieldStatus;
+  recoveryPhase: RecoveryPhase;
 }
 
 function clamp01(value: number) {
@@ -87,6 +89,7 @@ const canonicalPresets: Record<Exclude<DemoStep, "intro" | "drone-scan">, DemoSt
     irrigationProgress: 0,
     scanProgress: 0,
     fieldStatus: "risk",
+    recoveryPhase: "none",
   },
   "select-field": {
     selectedFieldId: "A02",
@@ -96,6 +99,7 @@ const canonicalPresets: Record<Exclude<DemoStep, "intro" | "drone-scan">, DemoSt
     irrigationProgress: 0,
     scanProgress: 0,
     fieldStatus: "risk",
+    recoveryPhase: "none",
   },
   "inspect-risk": {
     selectedFieldId: "A02",
@@ -105,6 +109,7 @@ const canonicalPresets: Record<Exclude<DemoStep, "intro" | "drone-scan">, DemoSt
     irrigationProgress: 0,
     scanProgress: 1,
     fieldStatus: "risk",
+    recoveryPhase: "none",
   },
   irrigation: {
     selectedFieldId: "A02",
@@ -114,6 +119,7 @@ const canonicalPresets: Record<Exclude<DemoStep, "intro" | "drone-scan">, DemoSt
     irrigationProgress: 0.62,
     scanProgress: 1,
     fieldStatus: "processing",
+    recoveryPhase: "none",
   },
   recovered: {
     selectedFieldId: "A02",
@@ -123,6 +129,7 @@ const canonicalPresets: Record<Exclude<DemoStep, "intro" | "drone-scan">, DemoSt
     irrigationProgress: 1,
     scanProgress: 1,
     fieldStatus: "recovered",
+    recoveryPhase: "resolved",
   },
 };
 

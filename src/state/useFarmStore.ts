@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import type { DemoStep, FieldStatus, LayerMode, ViewMode } from "../types/farm";
 import { getDemoStatePreset } from "./irrigationEvent";
+import type { RecoveryPhase } from "./recoveryModel";
+
+/** 时间跳切卡（D1 根区复测 / D3 冠层复飞 等农业时间锚点）。null = 不显示。 */
+export interface TimeCut {
+  day: string;
+  label: string;
+}
 
 interface FarmState {
   selectedFieldId: string | null;
@@ -12,6 +19,8 @@ interface FarmState {
   introComplete: boolean;
   irrigationProgress: number;
   scanProgress: number;
+  recoveryPhase: RecoveryPhase;
+  timeCut: TimeCut | null;
   droneFollowing: boolean;
   fieldStatuses: Record<string, FieldStatus>;
   selectField: (id: string | null) => void;
@@ -23,6 +32,8 @@ interface FarmState {
   setIntroComplete: (complete: boolean) => void;
   setIrrigationProgress: (progress: number) => void;
   setScanProgress: (progress: number) => void;
+  setRecoveryPhase: (phase: RecoveryPhase) => void;
+  setTimeCut: (cut: TimeCut | null) => void;
   setDroneFollowing: (following: boolean) => void;
   setFieldStatus: (id: string, status: FieldStatus) => void;
   applyDemoState: (step: DemoStep) => void;
@@ -43,6 +54,8 @@ export const useFarmStore = create<FarmState>((set) => ({
   introComplete: false,
   irrigationProgress: 0,
   scanProgress: 0,
+  recoveryPhase: "none",
+  timeCut: null,
   droneFollowing: false,
   fieldStatuses: initialStatuses,
   selectField: (selectedFieldId) => set({ selectedFieldId }),
@@ -54,6 +67,8 @@ export const useFarmStore = create<FarmState>((set) => ({
   setIntroComplete: (introComplete) => set({ introComplete }),
   setIrrigationProgress: (progress) => set({ irrigationProgress: Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0 }),
   setScanProgress: (progress) => set({ scanProgress: Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0 }),
+  setRecoveryPhase: (recoveryPhase) => set({ recoveryPhase }),
+  setTimeCut: (timeCut) => set({ timeCut }),
   setDroneFollowing: (droneFollowing) => set({ droneFollowing }),
   setFieldStatus: (id, status) => set((state) => ({ fieldStatuses: { ...state.fieldStatuses, [id]: status } })),
   applyDemoState: (step) => set((state) => {
@@ -66,6 +81,8 @@ export const useFarmStore = create<FarmState>((set) => ({
       demoStep: preset.demoStep,
       irrigationProgress: preset.irrigationProgress,
       scanProgress: preset.scanProgress,
+      recoveryPhase: preset.recoveryPhase,
+      timeCut: null,
       droneFollowing: false,
       fieldStatuses: { ...state.fieldStatuses, A02: preset.fieldStatus },
     };
@@ -79,6 +96,8 @@ export const useFarmStore = create<FarmState>((set) => ({
     demoPlaying: false,
     irrigationProgress: 0,
     scanProgress: 0,
+    recoveryPhase: "none",
+    timeCut: null,
     droneFollowing: false,
     fieldStatuses: { ...initialStatuses },
   }),

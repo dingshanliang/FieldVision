@@ -23,6 +23,7 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
   const tier = usePerformanceTier();
   const irrigationProgress = useFarmStore((state) => state.irrigationProgress);
   const scanProgress = useFarmStore((state) => state.scanProgress);
+  const recoveryPhase = useFarmStore((state) => state.recoveryPhase);
   const meshRef = useRef<InstancedMesh>(null);
   const preset = cropClumpPresets[field.cropType];
 
@@ -131,7 +132,7 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
     const straw = new Color(strawColor);
     const riskZone = field.riskZones?.[0];
     const color = new Color();
-    const evidence = deriveEvidenceState(scanProgress, irrigationProgress);
+    const evidence = deriveEvidenceState(scanProgress, irrigationProgress, recoveryPhase);
     const front = evidence.cropRecoveryProgress * (heroIrrigationInlet.frontMax + 18);
     placements.forEach(({ x, z }, index) => {
       color.copy(base).offsetHSL((random() - 0.5) * 0.03, (random() - 0.5) * 0.1, (random() - 0.5) * 0.09);
@@ -145,7 +146,7 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
       meshRef.current?.setColorAt(index, color);
     });
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
-  }, [field, irrigationProgress, placements, scanProgress]);
+  }, [field, irrigationProgress, placements, recoveryPhase, scanProgress]);
 
   useFrame(({ clock }) => {
     const mesh = meshRef.current;
