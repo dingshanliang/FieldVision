@@ -51,3 +51,8 @@ export const fields: FieldParcel[] = [
 ];
 
 export const fieldById = Object.fromEntries(fields.map((field) => [field.id, field])) as Record<string, FieldParcel>;
+
+/** Where canal water enters A02 (east edge, beside the branch canal) and how far
+ * the wetting front must travel to reach the farthest corner. Shared by the
+ * water-front shader (FieldParcel) and the crop recovery sweep (CropInstances). */
+export const heroIrrigationInlet = { x: 57, z: -34, frontMax: 112 } as const;

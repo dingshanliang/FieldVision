@@ -2,7 +2,10 @@ import { Environment, Lightformer } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import {
+  AdditiveBlending,
   BackSide,
+  BufferAttribute,
+  BufferGeometry,
   CanvasTexture,
   Color,
   ConeGeometry,
@@ -10,6 +13,7 @@ import {
   InstancedMesh,
   Matrix4,
   Mesh,
+  Points,
   Quaternion,
   SphereGeometry,
   SRGBColorSpace,
@@ -32,6 +36,26 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   varying vec3 vDirection;
   uniform vec3 sunDirection;
+
+  float fvHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float fvNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(fvHash(i), fvHash(i + vec2(1.0, 0.0)), u.x),
+               mix(fvHash(i + vec2(0.0, 1.0)), fvHash(i + vec2(1.0, 1.0)), u.x), u.y);
+  }
+  float fvFbm(vec2 p) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    for (int octave = 0; octave < 4; octave++) {
+      value += amplitude * fvNoise(p);
+      p = p * 2.13 + 17.7;
+      amplitude *= 0.5;
+    }
+    return value;
+  }
+
   void main() {
     vec3 dir = normalize(vDirection);
     float h = dir.y;
@@ -45,6 +69,16 @@ const fragmentShader = /* glsl */ `
 
     // Warm the horizon around the sun azimuth.
     sky += vec3(0.5, 0.22, 0.05) * pow(sunAmount, 5.0) * (1.0 - smoothstep(0.0, 0.5, h));
+
+    // Streaky high cirrus catching the sunset, stretched along the horizon.
+    if (h > 0.02) {
+      vec2 cuv = dir.xz / (h + 0.18);
+      float cirrus = fvFbm(vec2(cuv.x * 0.55 + cuv.y * 0.2, cuv.y * 1.9) * 1.6);
+      cirrus = smoothstep(0.52, 0.78, cirrus);
+      float band = smoothstep(0.05, 0.16, h) * (1.0 - smoothstep(0.28, 0.5, h));
+      vec3 cirrusColor = mix(vec3(0.96, 0.58, 0.42), vec3(1.0, 0.82, 0.6), pow(sunAmount, 3.0));
+      sky = mix(sky, cirrusColor, cirrus * band * 0.5);
+    }
 
     // Sun disc + layered halo (hot enough to feed bloom only at the core).
     float halo = pow(sunAmount, 90.0) * 0.5 + pow(sunAmount, 16.0) * 0.16;
@@ -150,18 +184,34 @@ function TreeLine() {
     });
   }, []);
 
+  // Poplars line the farm tracks (east road + south road) — previously they ran
+  // in a straight file straight through the A03 and B03 fields.
   const poplars = useMemo<TreeSpec[]>(() => {
     const random = seededRandom(3351);
-    return Array.from({ length: poplarCount }, (_, index) => {
-      const t = index / (poplarCount - 1);
-      return {
-        x: 90.5 + random() * 2.4,
-        z: 96 - t * 168 + (random() - 0.5) * 3,
+    const eastCount = 18;
+    const southCount = 16;
+    const list: TreeSpec[] = [];
+    for (let index = 0; index < eastCount; index += 1) {
+      const t = index / (eastCount - 1);
+      list.push({
+        x: 171 + random() * 2.6,
+        z: 88 - t * 184 + (random() - 0.5) * 4,
         scale: 0.8 + random() * 0.55,
         rotation: random() * Math.PI * 2,
         tone: random(),
-      };
-    });
+      });
+    }
+    for (let index = 0; index < southCount; index += 1) {
+      const t = index / (southCount - 1);
+      list.push({
+        x: -148 + t * 296 + (random() - 0.5) * 4,
+        z: -111 - random() * 2.6,
+        scale: 0.8 + random() * 0.55,
+        rotation: random() * Math.PI * 2,
+        tone: random(),
+      });
+    }
+    return list;
   }, []);
 
   const crownDark = useMemo(() => new Color("#22331f"), []);
@@ -236,6 +286,73 @@ function TreeLine() {
   );
 }
 
+/** Backlit dust motes drifting over the farm — sells the golden-hour air. */
+function DustMotes({ count }: { count: number }) {
+  const pointsRef = useRef<Points>(null);
+  const texture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 32;
+    const context = canvas.getContext("2d");
+    if (context) {
+      const gradient = context.createRadialGradient(16, 16, 1, 16, 16, 15);
+      gradient.addColorStop(0, "rgba(255, 232, 196, 0.85)");
+      gradient.addColorStop(0.5, "rgba(255, 214, 160, 0.28)");
+      gradient.addColorStop(1, "rgba(255, 206, 150, 0)");
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 32, 32);
+    }
+    const result = new CanvasTexture(canvas);
+    result.colorSpace = SRGBColorSpace;
+    return result;
+  }, []);
+  const seeds = useMemo(() => {
+    const random = seededRandom(6101);
+    return Array.from({ length: count }, () => ({
+      x: (random() - 0.5) * 380,
+      y: 0.6 + random() * 22,
+      z: -150 + random() * 300,
+      phase: random() * Math.PI * 2,
+      speed: 0.14 + random() * 0.4,
+    }));
+  }, [count]);
+  const geometry = useMemo(() => {
+    const result = new BufferGeometry();
+    result.setAttribute("position", new BufferAttribute(new Float32Array(count * 3), 3));
+    return result;
+  }, [count]);
+
+  useFrame(({ clock }) => {
+    const positions = pointsRef.current?.geometry.attributes.position;
+    if (!positions) return;
+    const time = clock.elapsedTime;
+    seeds.forEach((mote, index) => {
+      positions.setXYZ(
+        index,
+        mote.x + Math.sin(time * mote.speed + mote.phase) * 2.4,
+        mote.y + Math.sin(time * mote.speed * 0.7 + mote.phase * 1.7) * 1.5,
+        mote.z + Math.cos(time * mote.speed * 0.9 + mote.phase) * 2.4,
+      );
+    });
+    positions.needsUpdate = true;
+  });
+
+  return (
+    <points ref={pointsRef} geometry={geometry} frustumCulled={false}>
+      <pointsMaterial
+        map={texture}
+        color="#ffd9a8"
+        size={0.85}
+        sizeAttenuation
+        transparent
+        opacity={0.34}
+        blending={AdditiveBlending}
+        depthWrite={false}
+      />
+    </points>
+  );
+}
+
 export function Atmosphere() {
   const tier = usePerformanceTier();
   const shadowSize = tier === "high" ? 4096 : tier === "medium" ? 2048 : 1024;
@@ -262,6 +379,7 @@ export function Atmosphere() {
         shadow-radius={5}
       />
       <TreeLine />
+      {tier !== "low" && <DustMotes count={tier === "high" ? 240 : 130} />}
     </>
   );
 }

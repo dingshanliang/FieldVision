@@ -2,8 +2,10 @@ import { Html, useTexture } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import { ExtrudeGeometry, MeshPhysicalMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Texture, Vector2 } from "three";
+import type { WebGLProgramParametersWithUniforms } from "three";
 import type { FieldParcel as FieldParcelType } from "../types/farm";
 import { useFarmStore } from "../state/useFarmStore";
+import { heroIrrigationInlet } from "../data/fields";
 import { CropInstances } from "./CropInstances";
 
 interface FieldParcelProps { field: FieldParcelType }
@@ -109,7 +111,42 @@ export function FieldParcel({ field }: FieldParcelProps) {
 
   // A02 starts parched: low, dull water that rises and clears with irrigation.
   const waterLevel = isHero ? 0.435 + irrigationProgress * 0.055 : 0.46;
-  const waterOpacity = isHero ? 0.42 + irrigationProgress * 0.46 : 0.86;
+  const waterOpacity = 0.86;
+
+  // Hero field: the wetting front advances from the canal inlet — dull stagnant
+  // water ahead of the front, clear reflective water behind it, plus a bright
+  // ripple band right at the front edge. Driven by uFront = irrigationProgress.
+  const waterShader = useRef<WebGLProgramParametersWithUniforms | null>(null);
+  const patchWaterShader = useMemo(() => {
+    if (!isHero) return undefined;
+    return (shader: WebGLProgramParametersWithUniforms) => {
+      shader.uniforms.uFront = { value: 0 };
+      shader.uniforms.uInlet = { value: new Vector2(heroIrrigationInlet.x, heroIrrigationInlet.z) };
+      shader.uniforms.uFrontMax = { value: heroIrrigationInlet.frontMax };
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nvarying vec3 vFvWorld;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvFvWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+      shader.fragmentShader = shader.fragmentShader
+        .replace("#include <common>", `#include <common>
+          varying vec3 vFvWorld;
+          uniform float uFront;
+          uniform vec2 uInlet;
+          uniform float uFrontMax;`)
+        .replace("#include <color_fragment>", `#include <color_fragment>
+          {
+            float fvDist = distance(vFvWorld.xz, uInlet);
+            float fvFront = uFront * uFrontMax;
+            float fvInside = 1.0 - smoothstep(fvFront - 2.0, fvFront + 0.5, fvDist);
+            diffuseColor.rgb = mix(vec3(0.337, 0.329, 0.243), vec3(0.148, 0.224, 0.196), fvInside);
+            float fvBand = smoothstep(fvFront - 9.0, fvFront - 3.0, fvDist)
+              * (1.0 - smoothstep(fvFront - 3.0, fvFront - 0.2, fvDist))
+              * step(0.01, uFront) * step(uFront, 0.995);
+            diffuseColor.rgb += fvBand * vec3(1.0, 0.84, 0.58) * 0.65;
+            diffuseColor.a = mix(0.42, 0.82, fvInside);
+          }`);
+      waterShader.current = shader;
+    };
+  }, [isHero]);
 
   useFrame((_, delta) => {
     const normal = waterMaterialRef.current?.normalMap;
@@ -117,6 +154,8 @@ export function FieldParcel({ field }: FieldParcelProps) {
       normal.offset.x += delta * 0.008;
       normal.offset.y += delta * 0.005;
     }
+    const shader = waterShader.current;
+    if (shader) shader.uniforms.uFront!.value = irrigationProgress;
   });
 
   return (
@@ -158,16 +197,17 @@ export function FieldParcel({ field }: FieldParcelProps) {
         <mesh geometry={waterGeometry} position-y={field.elevation + waterLevel} receiveShadow>
           <meshPhysicalMaterial
             ref={waterMaterialRef}
-            color={isHero && irrigationProgress < 0.5 ? "#56543e" : "#3d5248"}
-            roughness={0.07}
+            color={isHero ? "#ffffff" : "#3d5248"}
+            roughness={isHero ? 0.16 : 0.07}
             metalness={0}
-            clearcoat={0.6}
+            clearcoat={isHero ? 0.3 : 0.6}
             clearcoatRoughness={0.22}
             transparent
-            opacity={waterOpacity}
+            opacity={isHero ? 1 : waterOpacity}
+            onBeforeCompile={patchWaterShader}
             normalMap={soilNormal}
             normalScale={waterNormalScale}
-            envMapIntensity={1.35}
+            envMapIntensity={isHero ? 0.75 : 1.35}
             polygonOffset
             polygonOffsetFactor={-2}
           />
