@@ -9,6 +9,9 @@ export interface TimeCut {
   label: string;
 }
 
+/** 演示节奏：fast 快览 / narration 讲解留白（导演系统 fv-o6c.12）。 */
+export type Pacing = "fast" | "narration";
+
 interface FarmState {
   selectedFieldId: string | null;
   hoveredFieldId: string | null;
@@ -16,6 +19,8 @@ interface FarmState {
   layerMode: LayerMode;
   demoStep: DemoStep;
   demoPlaying: boolean;
+  paused: boolean;
+  pacing: Pacing;
   introComplete: boolean;
   irrigationProgress: number;
   scanProgress: number;
@@ -29,6 +34,8 @@ interface FarmState {
   setLayerMode: (mode: LayerMode) => void;
   setDemoStep: (step: DemoStep) => void;
   setDemoPlaying: (playing: boolean) => void;
+  setPaused: (paused: boolean) => void;
+  setPacing: (pacing: Pacing) => void;
   setIntroComplete: (complete: boolean) => void;
   setIrrigationProgress: (progress: number) => void;
   setScanProgress: (progress: number) => void;
@@ -51,6 +58,8 @@ export const useFarmStore = create<FarmState>((set) => ({
   layerMode: "natural",
   demoStep: "intro",
   demoPlaying: false,
+  paused: false,
+  pacing: "fast",
   introComplete: false,
   irrigationProgress: 0,
   scanProgress: 0,
@@ -64,6 +73,8 @@ export const useFarmStore = create<FarmState>((set) => ({
   setLayerMode: (layerMode) => set({ layerMode }),
   setDemoStep: (demoStep) => set({ demoStep }),
   setDemoPlaying: (demoPlaying) => set({ demoPlaying }),
+  setPaused: (paused) => set({ paused }),
+  setPacing: (pacing) => set({ pacing }),
   setIntroComplete: (introComplete) => set({ introComplete }),
   setIrrigationProgress: (progress) => set({ irrigationProgress: Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0 }),
   setScanProgress: (progress) => set({ scanProgress: Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0 }),
@@ -94,6 +105,7 @@ export const useFarmStore = create<FarmState>((set) => ({
     layerMode: "natural",
     demoStep: "overview",
     demoPlaying: false,
+    paused: false,
     irrigationProgress: 0,
     scanProgress: 0,
     recoveryPhase: "none",

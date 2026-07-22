@@ -2,6 +2,7 @@ import { FarmCanvas } from "../scene/FarmCanvas";
 import { DemoTimeline } from "../ui/DemoTimeline";
 import { FieldDetailPanel } from "../ui/FieldDetailPanel";
 import { LayerSwitcher } from "../ui/LayerSwitcher";
+import { PresenterControls } from "../ui/PresenterControls";
 import { TimeCutCard } from "../ui/TimeCutCard";
 import { TopBar } from "../ui/TopBar";
 import { useFarmStore } from "../state/useFarmStore";
@@ -31,6 +32,7 @@ export function App() {
       <LayerSwitcher />
       <FieldDetailPanel />
       <DemoTimeline />
+      <PresenterControls />
       <TimeCutCard />
       <div className="canvas-status" aria-live="polite">三维基地已就绪。可选择地块、切换图层或播放完整演示。</div>
     </main>
