@@ -150,6 +150,9 @@ export function Drone() {
     targetQuaternion: new Quaternion(),
     targetEuler: new Euler(0, 0, 0, "YXZ"),
   }), []);
+  // Cruise progress along the patrol path — advanced with curvature-based
+  // speed so the drone slows into turns and stretches out on straights.
+  const pathT = useRef(0.15);
 
   useFrame(({ clock }, delta) => {
     if (!group.current) return;
@@ -166,7 +169,7 @@ export function Drone() {
       roll = Math.sin(time * 0.45 + 1.3) * 0.025;
       group.current.position.lerp(scratch.targetPosition, Math.min(1, delta * 1.8));
     } else {
-      const t = (time * visualConfig.droneSpeed) % 1;
+      const t = pathT.current;
       const point = curve.getPointAt(t);
       const ahead = curve.getPointAt((t + 0.012) % 1);
       const further = curve.getPointAt((t + 0.035) % 1);
@@ -177,6 +180,9 @@ export function Drone() {
       let headingDelta = headingNext - headingNow;
       if (headingDelta > Math.PI) headingDelta -= Math.PI * 2;
       if (headingDelta < -Math.PI) headingDelta += Math.PI * 2;
+      // Ease off before turns, pick up speed on straights.
+      const speedFactor = Math.max(0.45, Math.min(1.3, 1.18 - Math.abs(headingDelta) * 11));
+      pathT.current = (t + delta * visualConfig.droneSpeed * speedFactor) % 1;
       yaw = headingNow;
       roll = Math.max(-0.38, Math.min(0.38, -headingDelta * 7));
       // Pitch with vertical speed plus a slight nose-down cruise attitude.

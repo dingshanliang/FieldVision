@@ -92,13 +92,13 @@ docs/                    原始任务书
 - ambientCG Ground 026、Ground 037、Concrete 032、Metal 025 的 1K PBR 贴图；
 - 项目自身 Blender 脚本生成的无人机 GLB。
 
-天空、太阳光照和 IBL 目前为程序化生成（自定义天空 shader + Lightformer 环境），Poly Haven Rural Landscape HDR 保留在 `public/assets/environment/` 中备用但不再引用。
+可见天空使用项目内的蓝灰清晨云层 shader；材质反射和间接环境光使用 Poly Haven Rural Landscape HDR，避免金属、水面和叶片各自呈现不一致的“模型查看器”高光。
 
 第三方资源均为 CC0。没有使用需要登录、购买或人工接受额外条款的资产。
 
 ## 性能策略
 
-- 作物使用 `InstancedMesh`，选择英雄地块时局部提升密度；
+- 作物使用 `InstancedMesh`，选择英雄地块时局部提升密度；高空镜头使用行纹理 canopy LOD，进入地块后切换为带折面叶脊的真实植株几何；
 - 地形、材质和几何复用，避免逐帧创建对象；
 - 自动检测高/中/低性能档；分别调整 DPR、植被密度、阴影贴图和后期处理；
 - 高画质 DPR 上限为 1.75，低档固定为 1；

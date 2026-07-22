@@ -5,15 +5,16 @@ import type { FieldParcel } from "../types/farm";
 import { createCropClumpGeometry, cropClumpPresets, pointInPolygon, seededRandom } from "../utils/geometry";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { useFarmStore } from "../state/useFarmStore";
+import { heroIrrigationInlet } from "../data/fields";
 import { visualConfig } from "../config/visual";
 
 interface CropInstancesProps { field: FieldParcel; selected: boolean }
 
 const baseColors: Record<FieldParcel["cropType"], string> = {
-  rice: "#5e7f33",
-  corn: "#4a702c",
-  vegetable: "#3f7a3a",
-  rapeseed: "#7a8a3c",
+  rice: "#5f7938",
+  corn: "#537a34",
+  vegetable: "#4b8444",
+  rapeseed: "#839649",
 };
 const strawColor = "#b3944a";
 
@@ -28,7 +29,7 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
     [preset, field.id],
   );
   const material = useMemo(() => {
-    const result = new MeshStandardMaterial({ color: "#ffffff", roughness: 0.78, metalness: 0, side: DoubleSide });
+    const result = new MeshStandardMaterial({ color: "#ffffff", roughness: 0.88, metalness: 0, side: DoubleSide, envMapIntensity: 0.35 });
     result.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = { value: 0 };
       shader.uniforms.uWind = { value: visualConfig.windStrength };
@@ -100,7 +101,7 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
     for (let index = 0; index < target; index += 1) {
       const candidate = candidates[Math.floor(index * stride)];
       if (!candidate) continue;
-      const scale = 0.85 + random() * 0.3;
+      const scale = 0.78 + random() * 0.42;
       const matrix = new Matrix4();
       matrix.compose(
         new Vector3(candidate.x + (random() - 0.5) * 0.14, field.elevation + 0.52, candidate.z + (random() - 0.5) * 0.14),
@@ -118,8 +119,9 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
     meshRef.current.instanceMatrix.needsUpdate = true;
   }, [placements]);
 
-  // Colour: healthy green jitter + straw-yellow dryness inside the risk zone that
-  // recovers as irrigation progresses.
+  // Colour: healthy green jitter + straw-yellow dryness inside the risk zone.
+  // Recovery follows the wetting front: plants green up shortly after the
+  // irrigation water reaches them, so the sweep is visible from the air.
   useEffect(() => {
     if (!meshRef.current) return;
     const random = seededRandom(field.id.charCodeAt(0) * 113);
@@ -127,11 +129,14 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
     const straw = new Color(strawColor);
     const riskZone = field.riskZones?.[0];
     const color = new Color();
+    const front = irrigationProgress * (heroIrrigationInlet.frontMax + 18);
     placements.forEach(({ x, z }, index) => {
       color.copy(base).offsetHSL((random() - 0.5) * 0.03, (random() - 0.5) * 0.1, (random() - 0.5) * 0.09);
       if (riskZone) {
         const distance = Math.hypot(x - riskZone.center[0], z - riskZone.center[2]);
-        const dryness = Math.min(1, Math.max(0, 1.15 - distance / riskZone.radius)) * (1 - irrigationProgress);
+        const fromInlet = Math.hypot(x - heroIrrigationInlet.x, z - heroIrrigationInlet.z);
+        const recovery = Math.min(1, Math.max(0, (front - fromInlet) / 16));
+        const dryness = Math.min(1, Math.max(0, 1.15 - distance / riskZone.radius)) * (1 - recovery);
         color.lerp(straw, Math.min(0.9, dryness * 1.05));
       }
       meshRef.current?.setColorAt(index, color);

@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { Suspense } from "react";
-import { ACESFilmicToneMapping, PCFSoftShadowMap } from "three";
+import { ACESFilmicToneMapping, PCFShadowMap } from "three";
 import { FarmScene } from "./FarmScene";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 
@@ -10,10 +10,10 @@ export function FarmCanvas() {
   return (
     <Canvas
       className="farm-canvas"
-      shadows={{ type: PCFSoftShadowMap }}
+      shadows={{ type: PCFShadowMap }}
       dpr={dpr}
-      camera={{ position: [286, 196, 320], fov: 42, near: 0.1, far: 1600 }}
-      gl={{ antialias: true, alpha: false, powerPreference: "high-performance", toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.04 }}
+      camera={{ position: [248, 148, 276], fov: 45, near: 0.1, far: 1600 }}
+      gl={{ antialias: true, alpha: false, powerPreference: "high-performance", toneMapping: ACESFilmicToneMapping, toneMappingExposure: 0.98 }}
     >
       <Suspense fallback={null}><FarmScene /></Suspense>
     </Canvas>

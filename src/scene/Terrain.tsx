@@ -10,6 +10,7 @@ import {
   RepeatWrapping,
   SRGBColorSpace,
   Texture,
+  Vector2,
 } from "three";
 import { fbm2D } from "../utils/noise";
 
@@ -63,7 +64,7 @@ function RidgeRing({ radius, baseHeight, variance, seed, color }: {
   }, [radius, baseHeight, variance, seed]);
   return (
     <mesh geometry={geometry}>
-      <meshBasicMaterial color={color} fog side={DoubleSide} />
+      <meshStandardMaterial color={color} roughness={1} metalness={0} fog side={DoubleSide} />
     </mesh>
   );
 }
@@ -76,7 +77,7 @@ export function Terrain() {
   ]) as [Texture, Texture, Texture];
   const [colorMap, normalMap, roughnessMap] = useMemo(() => {
     const maps = [sourceColor.clone(), sourceNormal.clone(), sourceRoughness.clone()] as [Texture, Texture, Texture];
-    maps.forEach((texture) => { texture.wrapS = RepeatWrapping; texture.wrapT = RepeatWrapping; texture.repeat.set(30, 24); });
+    maps.forEach((texture) => { texture.wrapS = RepeatWrapping; texture.wrapT = RepeatWrapping; texture.repeat.set(20, 16); });
     maps[0].colorSpace = SRGBColorSpace;
     return maps;
   }, [sourceColor, sourceNormal, sourceRoughness]);
@@ -86,10 +87,10 @@ export function Terrain() {
     result.rotateX(-Math.PI / 2);
     const positions = result.attributes.position;
     const colors: number[] = [];
-    const grass = new Color("#4d5a34");
-    const meadow = new Color("#5d6137");
-    const dry = new Color("#6d5a3a");
-    const hill = new Color("#665137");
+    const grass = new Color("#81906e");
+    const meadow = new Color("#909a78");
+    const dry = new Color("#9d896b");
+    const hill = new Color("#7e8980");
     const scratch = new Color();
 
     if (positions) {
@@ -119,14 +120,15 @@ export function Terrain() {
           vertexColors
           map={colorMap}
           normalMap={normalMap}
+          normalScale={new Vector2(0.28, 0.28)}
           roughnessMap={roughnessMap}
           roughness={1}
           metalness={0}
           envMapIntensity={0.28}
         />
       </mesh>
-      <RidgeRing radius={640} baseHeight={26} variance={34} seed={311} color="#5c4a40" />
-      <RidgeRing radius={810} baseHeight={44} variance={52} seed={877} color="#71606b" />
+      <RidgeRing radius={640} baseHeight={48} variance={42} seed={311} color="#566158" />
+      <RidgeRing radius={810} baseHeight={68} variance={58} seed={877} color="#6f7773" />
     </group>
   );
 }

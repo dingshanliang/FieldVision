@@ -13,8 +13,8 @@ export const fields: FieldParcel[] = [
     moisture: 18, moistureTarget: 27, growthIndex: 0.54, color: "#658a3d",
     cameraPresets: {
       aerial: { position: [38,48,2], target: [8,0,-61], duration: 2.1 },
-      ground: { position: [48,2.8,-38], target: [-8,1.8,-76], duration: 2.6 },
-      irrigationInlet: { position: [99,17,18], target: [65,1,-30], duration: 2.2 },
+      ground: { position: [48,2.9,-38], target: [-8,1.85,-76], duration: 2.6 },
+      irrigationInlet: { position: [108,11,34], target: [69,1.8,-22], duration: 2.2 },
     },
     riskZones: [{ id: "A02-R1", center: [23,1.6,-66], radius: 18, severity: "high" }],
   },
@@ -51,3 +51,8 @@ export const fields: FieldParcel[] = [
 ];
 
 export const fieldById = Object.fromEntries(fields.map((field) => [field.id, field])) as Record<string, FieldParcel>;
+
+/** Where canal water enters A02 (east edge, beside the branch canal) and how far
+ * the wetting front must travel to reach the farthest corner. Shared by the
+ * water-front shader (FieldParcel) and the crop recovery sweep (CropInstances). */
+export const heroIrrigationInlet = { x: 57, z: -34, frontMax: 112 } as const;

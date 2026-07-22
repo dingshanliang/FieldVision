@@ -1,14 +1,14 @@
 export const visualConfig = {
   cropDensity: 1,
-  windStrength: 0.32,
-  sunIntensity: 2.7,
-  sunColor: "#ffd2a0",
-  /** Direction TOWARD the sun (low golden-hour sun, west-northwest). */
-  sunDirection: [-1.0, 0.22, -1.1] as const,
-  fogColor: "#cfa887",
-  fogDensity: 0.001,
-  bloomIntensity: 0.32,
-  bloomThreshold: 1.0,
+  windStrength: 0.22,
+  sunIntensity: 2.15,
+  sunColor: "#fff0dc",
+  /** Direction TOWARD the sun: low side-light, never directly behind the hero field. */
+  sunDirection: [-1.0, 0.38, 0.15] as const,
+  fogColor: "#aeb8b3",
+  fogDensity: 0.00072,
+  bloomIntensity: 0.16,
+  bloomThreshold: 1.18,
   cameraTransitionSeconds: 2.4,
   introDurationSeconds: 8,
   irrigationDurationSeconds: 15,
