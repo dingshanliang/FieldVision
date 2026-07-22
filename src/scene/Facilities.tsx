@@ -1,4 +1,4 @@
-import { Html, RoundedBox, useTexture } from "@react-three/drei";
+import { Html, RoundedBox, useGLTF, useTexture } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import { ExtrudeGeometry, Group, RepeatWrapping, Shape, SRGBColorSpace, Texture } from "three";
@@ -280,11 +280,27 @@ function Warehouse() {
   );
 }
 
+/**
+ * A02 东支渠旁的本地提升泵 skid（fv-o6c.9 hero 资产，Blender 自制 GLB）。
+ * 加法放置在闸门进水路径旁，灌溉章节镜头经过处可看到近景细节（电机/散热翅片/
+ * 控制箱/警示带/锈渍），不替换既有北泵站。资产由 scripts/blender/create_hero_facilities.py 生成。
+ */
+function HeroPumpSkid() {
+  const { scene } = useGLTF("/assets/models/fieldvision-pump-station.glb");
+  return (
+    <group position={[66.5, 0.7, -23]} rotation={[0, -0.6, 0]} scale={3.4}>
+      <primitive object={scene} />
+    </group>
+  );
+}
+useGLTF.preload("/assets/models/fieldvision-pump-station.glb");
+
 export function Facilities() {
   return (
     <group>
       <PumpStation />
       <Gate />
+      <HeroPumpSkid />
       <WeatherStation />
       <Warehouse />
     </group>
