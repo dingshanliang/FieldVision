@@ -2,10 +2,7 @@ import { useTexture } from "@react-three/drei";
 import { useMemo } from "react";
 import {
   BufferAttribute,
-  BufferGeometry,
   Color,
-  DoubleSide,
-  Float32BufferAttribute,
   PlaneGeometry,
   RepeatWrapping,
   SRGBColorSpace,
@@ -31,42 +28,6 @@ function terrainHeightAt(x: number, z: number) {
   const hills = fbm2D(x * 0.0055, z * 0.0055, 4, 7) * 21 * rise;
   const undulation = fbm2D(x * 0.02, z * 0.02, 3, 23) * 0.32 * (1 - rise * 0.75);
   return hills + undulation - 0.12;
-}
-
-function RidgeRing({ radius, baseHeight, variance, seed, color }: {
-  radius: number;
-  baseHeight: number;
-  variance: number;
-  seed: number;
-  color: string;
-}) {
-  const geometry = useMemo(() => {
-    const segments = 220;
-    const positions: number[] = [];
-    const indices: number[] = [];
-    for (let index = 0; index <= segments; index += 1) {
-      const angle = (index / segments) * Math.PI * 2;
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
-      const ridge = baseHeight + fbm2D(Math.cos(angle) * 3.1, Math.sin(angle) * 3.1, 4, seed) * variance
-        + fbm2D(Math.cos(angle) * 9.4, Math.sin(angle) * 9.4, 2, seed + 5) * variance * 0.22;
-      positions.push(x, -10, z, x, Math.max(6, ridge), z);
-      if (index < segments) {
-        const row = index * 2;
-        indices.push(row, row + 2, row + 1, row + 1, row + 2, row + 3);
-      }
-    }
-    const result = new BufferGeometry();
-    result.setAttribute("position", new Float32BufferAttribute(positions, 3));
-    result.setIndex(indices);
-    result.computeVertexNormals();
-    return result;
-  }, [radius, baseHeight, variance, seed]);
-  return (
-    <mesh geometry={geometry}>
-      <meshStandardMaterial color={color} roughness={1} metalness={0} fog side={DoubleSide} />
-    </mesh>
-  );
 }
 
 export function Terrain() {
@@ -127,8 +88,6 @@ export function Terrain() {
           envMapIntensity={0.28}
         />
       </mesh>
-      <RidgeRing radius={640} baseHeight={48} variance={42} seed={311} color="#566158" />
-      <RidgeRing radius={810} baseHeight={68} variance={58} seed={877} color="#6f7773" />
     </group>
   );
 }

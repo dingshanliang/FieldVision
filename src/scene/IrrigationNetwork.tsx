@@ -17,6 +17,7 @@ import {
 } from "three";
 import { useTexture } from "@react-three/drei";
 import { useFarmStore } from "../state/useFarmStore";
+import { deriveIrrigationEvent } from "../state/irrigationEvent";
 
 const mainPoints = [[82, 1.3, 104], [78, 1.1, 78], [74, 0.8, 43], [70, 0.9, 8], [67, 1.1, -20], [62, 1.2, -44], [54, 1.35, -62]] as const;
 const curve = new CatmullRomCurve3(mainPoints.map(([x, y, z]) => new Vector3(x, y, z)), false, "catmullrom", 0.28);
@@ -112,12 +113,10 @@ function useChannelMaps(asset: "Concrete032" | "Ground037"): [Texture, Texture, 
   }, [sourceColor, sourceNormal, sourceRoughness]);
 }
 
-function ChannelWater({ path, width, baseLift, fillStart, rise }: { path: CatmullRomCurve3; width: number; baseLift: number; fillStart: number; rise: number }) {
-  const progress = useFarmStore((state) => state.irrigationProgress);
+function ChannelWater({ path, width, baseLift, fill, rise }: { path: CatmullRomCurve3; width: number; baseLift: number; fill: number; rise: number }) {
   const normalMap = useWaterNormal();
   const meshRef = useRef<Mesh>(null);
   const geometry = useMemo(() => createRibbon(path, width, 0, 10), [path, width]);
-  const fill = Math.min(1, Math.max(0, (progress - fillStart) / Math.max(0.001, 1 - fillStart)));
 
   useFrame((_, delta) => {
     const mesh = meshRef.current;
@@ -147,9 +146,8 @@ function ChannelWater({ path, width, baseLift, fillStart, rise }: { path: Catmul
   );
 }
 
-function FlowParticles() {
+function FlowParticles({ flowProgress }: { flowProgress: number }) {
   const pointsRef = useRef<Points>(null);
-  const progress = useFarmStore((state) => state.irrigationProgress);
   const count = 42;
   const geometry = useMemo(() => {
     const result = new BufferGeometry();
@@ -175,12 +173,12 @@ function FlowParticles() {
   }, []);
 
   useFrame(({ clock }) => {
-    if (!pointsRef.current || progress <= 0.01) return;
+    if (!pointsRef.current || flowProgress <= 0.01) return;
     const positions = pointsRef.current.geometry.attributes.position;
     if (!positions) return;
     for (let index = 0; index < count; index += 1) {
-      const normalized = (index / count + clock.elapsedTime * (0.05 + progress * 0.05)) % 1;
-      const reveal = Math.min(1, progress * 1.18);
+      const normalized = (index / count + clock.elapsedTime * (0.05 + flowProgress * 0.05)) % 1;
+      const reveal = Math.min(1, flowProgress * 1.18);
       const point = curve.getPointAt(normalized * reveal);
       positions.setXYZ(index, point.x, point.y - 0.1, point.z);
     }
@@ -188,13 +186,15 @@ function FlowParticles() {
   });
 
   return (
-    <points ref={pointsRef} geometry={geometry} visible={progress > 0.01}>
+    <points ref={pointsRef} geometry={geometry} visible={flowProgress > 0.01}>
       <pointsMaterial map={particleTexture} color="#cfe8dd" size={0.44} sizeAttenuation transparent opacity={0.3} depthWrite={false} />
     </points>
   );
 }
 
 export function IrrigationNetwork() {
+  const progress = useFarmStore((state) => state.irrigationProgress);
+  const event = deriveIrrigationEvent(progress);
   const mainBank = useMemo(() => createEdgeBands(curve, 12.4, 8.4, 0.05), []);
   const mainLining = useMemo(() => createEdgeBands(curve, 8.4, 5.7, 0.07), []);
   const branchBank = useMemo(() => createEdgeBands(branchCurve, 5.4, 3.25, 0.02, 3), []);
@@ -215,9 +215,9 @@ export function IrrigationNetwork() {
       <mesh geometry={branchLining} receiveShadow>
         <meshStandardMaterial color="#7b7a70" map={concreteColor} normalMap={concreteNormal} roughnessMap={concreteRoughness} roughness={0.95} metalness={0} envMapIntensity={0.22} side={DoubleSide} />
       </mesh>
-      <ChannelWater path={curve} width={5.7} baseLift={-0.3} fillStart={0} rise={0.24} />
-      <ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fillStart={0.3} rise={0.15} />
-      <FlowParticles />
+      <ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} />
+      <ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} />
+      <FlowParticles flowProgress={event.mainChannelProgress} />
     </group>
   );
 }

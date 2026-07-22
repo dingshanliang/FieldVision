@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import { ExtrudeGeometry, Group, RepeatWrapping, Shape, SRGBColorSpace, Texture } from "three";
 import { useFarmStore } from "../state/useFarmStore";
+import { deriveIrrigationEvent } from "../state/irrigationEvent";
 
 type PbrSet = [Texture, Texture, Texture];
 
@@ -42,7 +43,8 @@ function GableRoof({ width, height, depth, y, color }: { width: number; height: 
 function PumpStation() {
   const [colorMap, normalMap, roughnessMap] = useMaterialMaps("Concrete032", 1.4);
   const progress = useFarmStore((state) => state.irrigationProgress);
-  const active = progress > 0.01;
+  const event = deriveIrrigationEvent(progress);
+  const active = event.pumpProgress > 0;
   return (
     <group position={[82, 1.6, 108]} rotation={[0, -0.16, 0]}>
       {/* concrete apron */}
@@ -128,7 +130,8 @@ function Gate() {
   const [colorMap, normalMap, roughnessMap] = useMaterialMaps("Metal025", 1.1);
   const [concreteColor, concreteNormal, concreteRoughness] = useMaterialMaps("Concrete032", 1.2);
   const progress = useFarmStore((state) => state.irrigationProgress);
-  const opening = Math.min(1, progress / 0.25);
+  const event = deriveIrrigationEvent(progress);
+  const opening = event.gateProgress;
   return (
     <group position={[69, 0.38, -18]} rotation={[0, 0.18, 0]}>
       <RoundedBox args={[8.4, 0.55, 5.2]} radius={0.14} smoothness={2} position-y={0.04} receiveShadow>
@@ -191,7 +194,7 @@ function Gate() {
       </RoundedBox>
       <mesh position={[2.2, 6.15, 0.25]}>
         <boxGeometry args={[0.58, 0.42, 0.04]} />
-        <meshStandardMaterial color={progress > 0.01 ? "#72d69b" : "#303936"} emissive={progress > 0.01 ? "#3fbd75" : "#000000"} emissiveIntensity={progress > 0.01 ? 1.6 : 0} />
+        <meshStandardMaterial color={event.gateProgress > 0 ? "#72d69b" : "#303936"} emissive={event.gateProgress > 0 ? "#3fbd75" : "#000000"} emissiveIntensity={event.gateProgress > 0 ? 1.6 : 0} />
       </mesh>
     </group>
   );

@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "prd": "docs/prd/a02-explainable-recovery-and-hero-realism.md",
+  "started": "2026-07-22",
+  "commit_policy": "ask",
+  "goal_tracking": {
+    "enabled": true,
+    "objective": "完成 docs/prd/a02-explainable-recovery-and-hero-realism.md 的开发和验证：生成模块级验收标准，完成空间证据链、设备与水路因果、恢复验证、照片级远景、尺度锚点和 A02 英雄资产实现，验证所有 P0/P1 验收标准通过，运行类型检查、lint、构建和真实浏览器五段验收，更新 pilot 状态和验证记录，并给出最终交接说明；除非明确要求，不要 push。",
+    "completed": false
+  },
+  "clarifications": [
+    "2026-07-22: 用户确认完整 pilot；视觉地域采用江南/长三角现代稻作示范区，数据明确标注演示模拟。"
+  ],
+  "consecutive_failures": 0,
+  "last_failure_reason": "",
+  "parallel_agents": [],
+  "context_hints": {
+    "tech_stack": "Vite + React + TypeScript + Three.js / React Three Fiber + Zustand",
+    "source_dir": "src",
+    "test_dir": "",
+    "test_runner": "",
+    "build_command": "pnpm typecheck && pnpm lint && pnpm build",
+    "api_dir": "",
+    "service_dir": "",
+    "model_dir": "src/types and src/state",
+    "migration_dir": ""
+  },
+  "modules": [
+    {
+      "name": "demo-causal-state",
+      "display_name": "演示因果状态",
+      "status": "done",
+      "ac_file": "docs/acceptance-criteria/demo-causal-state.md",
+      "dependencies": [],
+      "total_acs": 12,
+      "pass": 12,
+      "fail": 0,
+      "partial": 0,
+      "skip": 0,
+      "notes": ""
+    },
+    {
+      "name": "spatial-evidence-recovery",
+      "display_name": "空间证据与恢复验证",
+      "status": "done",
+      "ac_file": "docs/acceptance-criteria/spatial-evidence-recovery.md",
+      "dependencies": [
+        "demo-causal-state"
+      ],
+      "total_acs": 15,
+      "pass": 15,
+      "fail": 0,
+      "partial": 0,
+      "skip": 0,
+      "notes": ""
+    },
+    {
+      "name": "hero-environment-realism",
+      "display_name": "英雄环境写实",
+      "status": "done",
+      "ac_file": "docs/acceptance-criteria/hero-environment-realism.md",
+      "dependencies": [],
+      "total_acs": 11,
+      "pass": 11,
+      "fail": 0,
+      "partial": 0,
+      "skip": 0,
+      "notes": ""
+    }
+  ]
+}

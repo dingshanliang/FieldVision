@@ -8,6 +8,7 @@ import { useFarmStore } from "../state/useFarmStore";
 import { heroIrrigationInlet } from "../data/fields";
 import { seededRandom } from "../utils/geometry";
 import { CropInstances } from "./CropInstances";
+import { deriveEvidenceState } from "../state/evidenceModel";
 
 interface FieldParcelProps { field: FieldParcelType }
 
@@ -95,7 +96,10 @@ export function FieldParcel({ field }: FieldParcelProps) {
   const hoveredFieldId = useFarmStore((state) => state.hoveredFieldId);
   const layerMode = useFarmStore((state) => state.layerMode);
   const viewMode = useFarmStore((state) => state.viewMode);
+  const demoStep = useFarmStore((state) => state.demoStep);
   const irrigationProgress = useFarmStore((state) => state.irrigationProgress);
+  const scanProgress = useFarmStore((state) => state.scanProgress);
+  const status = useFarmStore((state) => state.fieldStatuses[field.id] ?? field.status);
   const selectField = useFarmStore((state) => state.selectField);
   const setHoveredField = useFarmStore((state) => state.setHoveredField);
   const setViewMode = useFarmStore((state) => state.setViewMode);
@@ -154,24 +158,26 @@ export function FieldParcel({ field }: FieldParcelProps) {
   }, [field.polygon]);
 
   const soilTint = useMemo(() => {
-    if (layerMode === "growth") return field.status === "risk" ? "#8a5a30" : field.status === "attention" ? "#7d7040" : "#4a5c34";
+    if (layerMode === "growth") return status === "risk" ? "#8a5a30" : status === "attention" ? "#7d7040" : "#4a5c34";
     if (layerMode === "moisture") return field.moisture < 21 ? "#7d543a" : field.moisture < 25 ? "#5d5c3c" : "#39584c";
     if (layerMode === "facility") return "#43413a";
     return isRice ? "#a18f70" : "#96866b";
-  }, [field, isRice, layerMode]);
+  }, [field, isRice, layerMode, status]);
 
   const canopyColor = useMemo(() => {
-    if (layerMode === "growth") return field.status === "risk" ? "#827047" : "#526745";
+    if (layerMode === "growth") return status === "risk" ? "#827047" : "#526745";
     if (layerMode === "moisture") return field.moisture < 21 ? "#766247" : "#4b6256";
     if (layerMode === "facility") return "#54564e";
     if (field.cropType === "corn") return "#6f8352";
     if (field.cropType === "vegetable") return "#68916a";
     if (field.cropType === "rapeseed") return "#89945a";
     return "#778b58";
-  }, [field, layerMode]);
+  }, [field, layerMode, status]);
+
+  const evidence = deriveEvidenceState(scanProgress, irrigationProgress);
 
   // A02 starts parched: low, dull water that rises and clears with irrigation.
-  const waterLevel = isHero ? 0.435 + irrigationProgress * 0.055 : 0.46;
+  const waterLevel = isHero ? 0.435 + evidence.wettingProgress * 0.055 : 0.46;
   const waterOpacity = 0.72;
 
   // Hero field: the wetting front advances from the canal inlet — dull stagnant
@@ -216,7 +222,7 @@ export function FieldParcel({ field }: FieldParcelProps) {
       normal.offset.y += delta * 0.005;
     }
     const shader = waterShader.current;
-    if (shader) shader.uniforms.uFront!.value = irrigationProgress;
+    if (shader) shader.uniforms.uFront!.value = evidence.wettingProgress;
   });
 
   return (
@@ -293,7 +299,7 @@ export function FieldParcel({ field }: FieldParcelProps) {
           />
         </mesh>
       )}
-      {isHero && field.riskZones?.[0] && irrigationProgress < 0.98 && (
+      {isHero && field.riskZones?.[0] && evidence.cropRecoveryProgress < 0.98 && (
         <mesh
           position={[field.riskZones[0].center[0], field.elevation + 0.43, field.riskZones[0].center[2]]}
           rotation={[-Math.PI / 2, 0, 0]}
@@ -307,7 +313,7 @@ export function FieldParcel({ field }: FieldParcelProps) {
             roughnessMap={dryRoughness}
             roughness={1}
             transparent
-            opacity={0.9 * (1 - irrigationProgress)}
+            opacity={0.9 * evidence.riskEvidenceStrength}
             envMapIntensity={0.25}
             polygonOffset
             polygonOffsetFactor={-1}
@@ -315,7 +321,7 @@ export function FieldParcel({ field }: FieldParcelProps) {
         </mesh>
       )}
       <CropInstances field={field} selected={selected} />
-      {(hovered || selected) && viewMode !== "field-ground" && viewMode !== "irrigation" && (
+      {(hovered || selected) && viewMode !== "field-ground" && viewMode !== "irrigation" && !["inspect-risk", "drone-scan", "recovered"].includes(demoStep) && (
         <Html position={[center[0], field.elevation + 7.5, center[1]]} center distanceFactor={80} zIndexRange={[20, 0]}>
           <div className={`field-label ${selected ? "field-label--selected" : ""}`}>
             <span>{field.id}</span>

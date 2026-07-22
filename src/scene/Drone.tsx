@@ -93,6 +93,7 @@ export function Drone() {
   const group = useRef<Group>(null);
   const scanMesh = useRef<Mesh>(null);
   const demoStep = useFarmStore((state) => state.demoStep);
+  const scanProgress = useFarmStore((state) => state.scanProgress);
   const following = useFarmStore((state) => state.droneFollowing);
   const setFollowing = useFarmStore((state) => state.setDroneFollowing);
   const { scene } = useGLTF("/assets/models/fieldvision-drone.glb");
@@ -162,8 +163,13 @@ export function Drone() {
     let pitch: number;
     let roll: number;
     if (scanning) {
-      // Hover: gentle bob + slow yaw wander, like station-keeping in a breeze.
-      scratch.targetPosition.set(23, 24 + Math.sin(time * 0.85) * 0.28, -66);
+      // A real acquisition pass crosses the parcel; direct timeline jumps use
+      // scanProgress=1 and settle at the final sampling position.
+      scratch.targetPosition.set(
+        -8 + scanProgress * 39,
+        24 + Math.sin(time * 0.85) * 0.28,
+        -43 - scanProgress * 38,
+      );
       yaw = Math.sin(time * 0.25) * 0.2;
       pitch = Math.sin(time * 0.6) * 0.02;
       roll = Math.sin(time * 0.45 + 1.3) * 0.025;

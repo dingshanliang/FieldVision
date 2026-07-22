@@ -9,6 +9,7 @@ All downloaded runtime assets in this repository are CC0. Attribution is not leg
 | Ground 037 1K JPG | [ambientCG](https://ambientcg.com/view?id=Ground037) | [CC0](https://docs.ambientcg.com/license/) | Field soil and damp canal edges | 2026-07-19 |
 | Concrete 032 1K JPG | [ambientCG](https://ambientcg.com/view?id=Concrete032) | [CC0](https://docs.ambientcg.com/license/) | Pump station and canal structures | 2026-07-19 |
 | Metal 025 1K JPG | [ambientCG](https://ambientcg.com/view?id=Metal025) | [CC0](https://docs.ambientcg.com/license/) | Gate and mechanical details | 2026-07-19 |
+| Jiangnan Rice Horizon v1 | Project-generated with OpenAI ImageGen; art direction and prompt by the FieldVision project | Generated output used by its creator under the applicable OpenAI terms | Local photographic horizon cylinder for the Jiangnan rice demonstration area; `public/assets/environment/jiangnan-rice-horizon-v1.png` | 2026-07-22 |
 
 ## Processing policy
 

@@ -38,15 +38,12 @@ export function useDemoSequence() {
     const controller = new AbortController();
     activeController = controller;
     const state = store.getState();
-    state.selectField("A02");
-    state.setViewMode("irrigation");
-    state.setDemoStep("irrigation");
+    state.applyDemoState("irrigation");
+    state.setIrrigationProgress(0);
     state.setDemoPlaying(true);
-    state.setFieldStatus("A02", "processing");
     try {
       await animateValue(12_000, controller.signal, (value) => store.getState().setIrrigationProgress(value));
-      store.getState().setFieldStatus("A02", "recovered");
-      store.getState().setDemoStep("recovered");
+      store.getState().applyDemoState("recovered");
       await wait(2_400, controller.signal);
       store.getState().setDemoPlaying(false);
     } catch (error) {
@@ -63,25 +60,21 @@ export function useDemoSequence() {
     state.setDemoPlaying(true);
     try {
       await wait(2_500, controller.signal);
-      store.getState().selectField("A02");
-      store.getState().setViewMode("field-ground");
-      store.getState().setDemoStep("select-field");
+      store.getState().applyDemoState("select-field");
       await wait(5_200, controller.signal);
-      store.getState().setLayerMode("growth");
+      store.getState().setScanProgress(0);
       store.getState().setDemoStep("inspect-risk");
-      await wait(3_300, controller.signal);
+      store.getState().setLayerMode("growth");
+      await wait(1_600, controller.signal);
       store.getState().setDemoStep("drone-scan");
-      await wait(6_800, controller.signal);
-      store.getState().setViewMode("irrigation");
-      store.getState().setDemoStep("irrigation");
-      store.getState().setFieldStatus("A02", "processing");
+      await animateValue(5_200, controller.signal, (value) => store.getState().setScanProgress(value));
+      await wait(1_600, controller.signal);
+      store.getState().applyDemoState("irrigation");
+      store.getState().setIrrigationProgress(0);
       await animateValue(12_000, controller.signal, (value) => store.getState().setIrrigationProgress(value));
-      store.getState().setFieldStatus("A02", "recovered");
-      store.getState().setDemoStep("recovered");
+      store.getState().applyDemoState("recovered");
       await wait(3_200, controller.signal);
-      store.getState().setViewMode("overview");
-      store.getState().selectField(null);
-      store.getState().setLayerMode("natural");
+      store.getState().applyDemoState("overview");
       store.getState().setDemoPlaying(false);
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) throw error;

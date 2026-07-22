@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "vitest run",
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview"
   },
@@ -38,7 +39,8 @@
     "globals": "latest",
     "typescript": "~5.9.3",
     "typescript-eslint": "latest",
-    "vite": "latest"
+    "vite": "latest",
+    "vitest": "latest"
   },
   "packageManager": "pnpm@10.20.0"
 }

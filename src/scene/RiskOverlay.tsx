@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import { Mesh, ShaderMaterial } from "three";
 import { useFarmStore } from "../state/useFarmStore";
+import { deriveEvidenceState } from "../state/evidenceModel";
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -15,6 +16,7 @@ const fragmentShader = /* glsl */ `
   varying vec2 vUv;
   uniform float uTime;
   uniform float uStrength;
+  uniform float uReveal;
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
   }
@@ -27,7 +29,8 @@ const fragmentShader = /* glsl */ `
     // Concentric scan rings travelling outward.
     float ring = smoothstep(0.055, 0.0, abs(fract(r * 2.6 - uTime * 0.32) - 0.5) - 0.4);
     float pulse = 0.6 + 0.25 * sin(uTime * 2.1);
-    float alpha = (body * 0.32 + ring * body * 0.55) * pulse * uStrength;
+    float revealed = smoothstep(-0.02, 0.08, uReveal - vUv.y);
+    float alpha = (body * 0.32 + ring * body * 0.55) * pulse * uStrength * revealed;
     vec3 color = mix(vec3(0.92, 0.42, 0.13), vec3(1.0, 0.66, 0.28), ring);
     gl_FragColor = vec4(color, alpha);
   }
@@ -44,7 +47,7 @@ export function RiskOverlay() {
       new ShaderMaterial({
         vertexShader,
         fragmentShader,
-        uniforms: { uTime: { value: 0 }, uStrength: { value: 0 } },
+        uniforms: { uTime: { value: 0 }, uStrength: { value: 0 }, uReveal: { value: 0 } },
         transparent: true,
         depthWrite: false,
       }),
@@ -53,14 +56,17 @@ export function RiskOverlay() {
 
   useFrame(({ clock }, delta) => {
     if (!ref.current) return;
-    const progress = useFarmStore.getState().irrigationProgress;
-    const target = visible ? Math.max(0, 1 - progress) : 0;
+    const state = useFarmStore.getState();
+    const evidence = deriveEvidenceState(state.scanProgress, state.irrigationProgress);
+    const target = visible ? evidence.riskEvidenceStrength : 0;
     const shaderMaterial = ref.current.material as ShaderMaterial;
     const uTime = shaderMaterial.uniforms.uTime as { value: number } | undefined;
     const uStrength = shaderMaterial.uniforms.uStrength as { value: number } | undefined;
+    const uReveal = shaderMaterial.uniforms.uReveal as { value: number } | undefined;
     if (uTime) uTime.value = clock.elapsedTime;
     if (uStrength) uStrength.value += (target - uStrength.value) * Math.min(1, delta * 3);
-    ref.current.scale.setScalar(1.06 - progress * 0.5 + Math.sin(clock.elapsedTime * 1.4) * 0.02);
+    if (uReveal) uReveal.value = evidence.scanReveal * 1.05;
+    ref.current.scale.setScalar(1.06 - evidence.cropRecoveryProgress * 0.5 + Math.sin(clock.elapsedTime * 1.4) * 0.02);
   });
 
   return (

@@ -15,24 +15,13 @@ export function DemoTimeline() {
   const current = useFarmStore((state) => state.demoStep);
   const playing = useFarmStore((state) => state.demoPlaying);
   const introComplete = useFarmStore((state) => state.introComplete);
-  const reset = useFarmStore((state) => state.resetDemo);
-  const selectField = useFarmStore((state) => state.selectField);
-  const setViewMode = useFarmStore((state) => state.setViewMode);
-  const setLayerMode = useFarmStore((state) => state.setLayerMode);
-  const setDemoStep = useFarmStore((state) => state.setDemoStep);
-  const setProgress = useFarmStore((state) => state.setIrrigationProgress);
-  const setFieldStatus = useFarmStore((state) => state.setFieldStatus);
+  const applyDemoState = useFarmStore((state) => state.applyDemoState);
   const { play, stop } = useDemoSequence();
   const activeIndex = Math.max(0, steps.findIndex((step) => step.id === current || (current === "drone-scan" && step.id === "inspect-risk")));
   if (!introComplete) return <div className="intro-caption"><span>FIELDVISION / 01</span><strong>每一块田，都可以进入</strong><small>Loading spatial twin</small></div>;
   function jumpTo(step: DemoStep) {
     stop();
-    if (step === "overview") { reset(); return; }
-    selectField("A02");
-    if (step === "select-field") { setProgress(0); setFieldStatus("A02", "risk"); setLayerMode("natural"); setViewMode("field-ground"); setDemoStep(step); return; }
-    if (step === "inspect-risk") { setProgress(0); setFieldStatus("A02", "risk"); setLayerMode("growth"); setViewMode("field-aerial"); setDemoStep("drone-scan"); return; }
-    if (step === "irrigation") { setLayerMode("growth"); setViewMode("irrigation"); setDemoStep(step); setProgress(0.62); setFieldStatus("A02", "processing"); return; }
-    setLayerMode("natural"); setViewMode("field-aerial"); setDemoStep("recovered"); setProgress(1); setFieldStatus("A02", "recovered");
+    applyDemoState(step);
   }
   return (
     <footer className="demo-timeline">

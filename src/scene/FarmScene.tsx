@@ -2,12 +2,14 @@ import { EffectComposer, Bloom, DepthOfField, Vignette } from "@react-three/post
 import { useFarmStore } from "../state/useFarmStore";
 import { Atmosphere } from "./Atmosphere";
 import { CameraDirector } from "./CameraDirector";
-import { Drone } from "./Drone";
+import { SafeDrone } from "./SafeDrone";
 import { Facilities } from "./Facilities";
 import { Farmland } from "./Farmland";
 import { FarmRoads } from "./FarmRoads";
 import { IrrigationNetwork } from "./IrrigationNetwork";
+import { IrrigationTelemetry } from "./IrrigationTelemetry";
 import { RiskOverlay } from "./RiskOverlay";
+import { SpatialEvidence } from "./SpatialEvidence";
 import { Terrain } from "./Terrain";
 import { GroundDetails } from "./GroundDetails";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
@@ -22,23 +24,24 @@ function dofPreset(viewMode: string, demoStep: string) {
 
 export function FarmScene() {
   const tier = usePerformanceTier();
-  const selectField = useFarmStore((state) => state.selectField);
-  const setViewMode = useFarmStore((state) => state.setViewMode);
+  const applyDemoState = useFarmStore((state) => state.applyDemoState);
   const viewMode = useFarmStore((state) => state.viewMode);
   const demoStep = useFarmStore((state) => state.demoStep);
   const dof = dofPreset(viewMode, demoStep);
   return (
     <>
       <Atmosphere />
-      <group onPointerMissed={() => { selectField(null); setViewMode("overview"); }}>
+      <group onPointerMissed={() => applyDemoState("overview")}>
         <Terrain />
         <GroundDetails />
         <FarmRoads />
         <Farmland />
         <IrrigationNetwork />
+        <IrrigationTelemetry />
         <Facilities />
-        <Drone />
+        <SafeDrone />
         <RiskOverlay />
+        <SpatialEvidence />
       </group>
       <CameraDirector />
       {tier !== "low" && (

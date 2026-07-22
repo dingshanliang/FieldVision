@@ -149,7 +149,7 @@ export function CameraDirector() {
     }
     const field = fieldById[selectedFieldId];
     if (!field) return;
-    if (demoStep === "drone-scan") {
+    if (demoStep === "drone-scan" || demoStep === "recovered") {
       flyTo([66, 52, -20], [23, 4, -66], true);
       return;
     }
