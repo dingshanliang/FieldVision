@@ -11,6 +11,9 @@ All downloaded runtime assets in this repository are CC0. Attribution is not leg
 | Metal 025 1K JPG | [ambientCG](https://ambientcg.com/view?id=Metal025) | [CC0](https://docs.ambientcg.com/license/) | Gate and mechanical details | 2026-07-19 |
 | Jiangnan Rice Horizon v1 | Project-generated with OpenAI ImageGen; art direction and prompt by the FieldVision project | Generated output used by its creator under the applicable OpenAI terms | Local photographic horizon cylinder for the Jiangnan rice demonstration area; `public/assets/environment/jiangnan-rice-horizon-v1.png` | 2026-07-22 |
 | Hero Pump Skid GLB | Project-generated via Blender script `scripts/blender/create_hero_facilities.py` (fv-o6c.9, Blender 自制) | Project-owned (self-authored) | A02 东支渠旁近景 hero 提升泵 skid；`public/assets/models/fieldvision-pump-station.glb` | 2026-07-23 |
+| Hero Canal Inlet GLB | Project-generated via Blender script `scripts/blender/create_hero_assets_2.py` (fv-o6c.9) | Project-owned (self-authored) | A02 进水口节制闸（翼墙+闸板+启闭机+标尺+警示带）；`public/assets/models/fieldvision-canal-inlet.glb` | 2026-07-23 |
+| Hero Culvert GLB | Project-generated via Blender script `scripts/blender/create_hero_assets_2.py` (fv-o6c.9) | Project-owned (self-authored) | 渠边机耕路箱涵（barrel+八字翼墙+消力池+路堤）；`public/assets/models/fieldvision-culvert.glb` | 2026-07-23 |
+| Hero Rice Cluster GLB | Project-generated via Blender script `scripts/blender/create_hero_assets_2.py` (fv-o6c.9) | Project-owned (self-authored) | A02 近景前景英雄水稻丛（分蘖+叶片+稻穗）；`public/assets/models/fieldvision-rice-cluster.glb` | 2026-07-23 |
 
 ## Processing policy
 

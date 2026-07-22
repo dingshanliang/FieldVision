@@ -12,6 +12,7 @@ import { EvidenceMap } from "./EvidenceMap";
 import { SpatialEvidence } from "./SpatialEvidence";
 import { Terrain } from "./Terrain";
 import { GroundDetails } from "./GroundDetails";
+import { HeroAssets } from "./HeroAssets";
 import { WorldLod } from "./WorldLod";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { visualConfig } from "../config/visual";
@@ -41,6 +42,7 @@ export function FarmScene() {
         <IrrigationNetwork />
         <IrrigationTelemetry />
         <Facilities />
+        <HeroAssets />
         <SafeDrone />
         <EvidenceMap />
         <SpatialEvidence />
