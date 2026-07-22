@@ -16,9 +16,9 @@
 | --- | --- | --- |
 | `textures/source/` | **17 MB** | 1K 源 JPG（Color/Normal/Roughness 三件套），**未压缩、未转 KTX2**。最大单文件 2.4 MB（Ground037 Normal）。 |
 | `environment/` | 3.5 MB | `rural_landscape_1k.hdr` 1.6 MB、`jiangnan-rice-horizon-v1.png` 2 MB。 |
-| `models/` | 592 KB | `fieldvision-drone.glb`（Meshopt+KTX2 已处理）。 |
+| `models/` | 1.5 MB | `fieldvision-drone.glb` 603K + 3.0 hero 资产（fv-o6c.9 Blender 自制）：泵 skid 281K、渠口 124K、涵洞 69K、稻株簇 524K。异步加载，不计入 JS bundle。 |
 
-**最大优化机会**：17 MB 源 JPG → KTX2（ETC1S/UASTC）通常可压到 1/4–1/3，且 GPU 直采省显存。资产路线 fv-o6c.2 已强制 KTX2，本基线确认其优先级最高。
+**最大优化机会**：17 MB 源 JPG → KTX2（ETC1S/UASTC）通常可压到 1/4–1/3，且 GPU 直采省显存。资产路线 fv-o6c.2 已强制 KTX2，本基线确认其优先级最高。（当前无 KTX2 编码器，列为工具安装跟进。）
 
 ### 1.3 性能分级（`usePerformanceTier`）
 - **low**：`prefers-reduced-motion` 或窄屏或 `hardwareConcurrency ≤ 4`。
@@ -34,6 +34,17 @@
 | 阴影投影 | 选中田或 high 档 | 同 | 关闭 |
 | 后期 Bloom+Vignette | ✓ | ✓ | ✗ |
 | DepthOfField | 近景章节 | 近景章节 | ✗ |
+
+### 1.4 FieldVision 3.0 新视觉层分级（fv-o6c.13）
+| 组件 | high | medium | low |
+| --- | --- | --- | --- |
+| WorldLod 连续世界（fv-o6c.10） | 110 中景条带 + 双村庄 + 远田 | 70 条带 + 双村庄 + 远田 | 36 条带（无村庄/远田） |
+| HeroAssets（fv-o6c.9） | 渠口 + 涵洞 + 3 丛稻株 | 渠口 + 涵洞 | 仅渠口 |
+| EvidenceMap/SpatialEvidence（fv-o6c.11） | 全（NDRE 图 + 分源点钉 + 日标签） | 全 | 全（轻量 DOM/着色器） |
+| 导演系统 PresenterControls（fv-o6c.12） | 全（键控 + HUD + 双节奏） | 全 | 全（纯 DOM/逻辑） |
+| 时间跳切卡 TimeCutCard | 全 | 全 | 全 |
+
+降级原则不变：只减细节，不破坏五段故事顺序与证据因果。
 
 ## 2. 待补测量（需真实 Chrome DevTools 会话）
 本基线已落硬件/体积/分级三项；以下需一次专注的 DevTools 性能会话（agent-browser 不便取精确 fps/VRAM），列为 fv-o6c.1 的 instrumentation 跟进：
