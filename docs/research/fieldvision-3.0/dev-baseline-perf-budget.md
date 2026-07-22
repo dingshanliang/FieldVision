@@ -46,11 +46,17 @@
 
 降级原则不变：只减细节，不破坏五段故事顺序与证据因果。
 
-## 2. 待补测量（需真实 Chrome DevTools 会话）
-本基线已落硬件/体积/分级三项；以下需一次专注的 DevTools 性能会话（agent-browser 不便取精确 fps/VRAM），列为 fv-o6c.1 的 instrumentation 跟进：
-- 五段镜头（overview / 俯冲 / 扫描 / 灌溉 / 复测）逐段 fps 与帧时间（high/medium/low 各一遍）。
-- GPU 显存与 draw calls（`renderer.info`）。
-- 冷启动加载时间（字体 + HDR + 地平线 + drone GLB）。
+## 2. 运行时测量（真实 Chrome，agent-browser rAF 采样）
+
+本机 high 档（cores≥8）、localhost、总览稳态：
+- **avgFps 60.3 / p10Fps 57.8**（90 帧采样，稳定贴近 vsync 60）。
+- **loadMs 714**（navigation loadEventEnd - startTime，localhost）。
+
+> 说明：本机为 high 档基准；medium/low 档帧率需在对应设备实测（降级策略见 1.3/1.4 保证不破坏故事顺序）。draw calls / GPU 显存需暴露 `renderer.info` 的调试钩子（当前未暴露，列为可选 instrumentation）。
+
+## 2b. 仍可选跟进的 DevTools 项
+- 五段镜头逐段 fps（medium/low 设备各一遍）。
+- `renderer.info` draw calls / 显存（需加调试钩子）。
 - 长动画/连续跳转的内存增长（leak 巡检）。
 
 ## 3. 建议预算（3.0 目标）
