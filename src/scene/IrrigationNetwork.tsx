@@ -5,6 +5,7 @@ import {
   BufferGeometry,
   CanvasTexture,
   CatmullRomCurve3,
+  DoubleSide,
   Float32BufferAttribute,
   Mesh,
   MeshPhysicalMaterial,
@@ -48,6 +49,40 @@ function createRibbon(path: CatmullRomCurve3, width: number, lift: number, uvSca
   return geometry;
 }
 
+/** Two side bands with an open centre, used for earthen banks and concrete lining. */
+function createEdgeBands(path: CatmullRomCurve3, outerWidth: number, innerWidth: number, lift: number, uvScale = 8) {
+  const divisions = 90;
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  for (let index = 0; index <= divisions; index += 1) {
+    const t = index / divisions;
+    const point = path.getPointAt(t);
+    const tangent = path.getTangentAt(t).normalize();
+    const side = new Vector3(-tangent.z, 0, tangent.x).normalize();
+    const offsets = [outerWidth / 2, innerWidth / 2, -innerWidth / 2, -outerWidth / 2];
+    offsets.forEach((offset, sideIndex) => {
+      positions.push(point.x + side.x * offset, point.y + lift, point.z + side.z * offset);
+      uvs.push(sideIndex === 0 || sideIndex === 3 ? 0 : 1, t * uvScale);
+    });
+    if (index < divisions) {
+      const row = index * 4;
+      indices.push(
+        row, row + 1, row + 4,
+        row + 1, row + 5, row + 4,
+        row + 2, row + 3, row + 6,
+        row + 3, row + 7, row + 6,
+      );
+    }
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 function useWaterNormal(): Texture {
   const [sourceNormal] = useTexture(["/assets/textures/source/Ground037/Ground037_1K-JPG_NormalGL.jpg"]) as [Texture];
   return useMemo(() => {
@@ -57,6 +92,24 @@ function useWaterNormal(): Texture {
     map.repeat.set(0.5, 3);
     return map;
   }, [sourceNormal]);
+}
+
+function useChannelMaps(asset: "Concrete032" | "Ground037"): [Texture, Texture, Texture] {
+  const [sourceColor, sourceNormal, sourceRoughness] = useTexture([
+    `/assets/textures/source/${asset}/${asset}_1K-JPG_Color.jpg`,
+    `/assets/textures/source/${asset}/${asset}_1K-JPG_NormalGL.jpg`,
+    `/assets/textures/source/${asset}/${asset}_1K-JPG_Roughness.jpg`,
+  ]) as [Texture, Texture, Texture];
+  return useMemo(() => {
+    const maps = [sourceColor.clone(), sourceNormal.clone(), sourceRoughness.clone()] as [Texture, Texture, Texture];
+    maps.forEach((map) => {
+      map.wrapS = RepeatWrapping;
+      map.wrapT = RepeatWrapping;
+      map.repeat.set(1.4, 9);
+    });
+    maps[0].colorSpace = SRGBColorSpace;
+    return maps;
+  }, [sourceColor, sourceNormal, sourceRoughness]);
 }
 
 function ChannelWater({ path, width, baseLift, fillStart, rise }: { path: CatmullRomCurve3; width: number; baseLift: number; fillStart: number; rise: number }) {
@@ -71,22 +124,22 @@ function ChannelWater({ path, width, baseLift, fillStart, rise }: { path: Catmul
     if (!mesh) return;
     const material = mesh.material as MeshPhysicalMaterial;
     if (material.normalMap) material.normalMap.offset.y += delta * (0.02 + fill * 0.09);
-    material.opacity = 0.55 + fill * 0.35;
-    material.roughness = 0.16 - fill * 0.09;
+    material.opacity = 0.64 + fill * 0.2;
+    material.roughness = 0.34 - fill * 0.1;
   });
 
   return (
     <mesh ref={meshRef} geometry={geometry} position-y={baseLift + fill * rise} receiveShadow>
       <meshPhysicalMaterial
-        color="#3d5248"
-        roughness={0.14}
+        color="#45665d"
+        roughness={0.34}
         metalness={0}
-        clearcoat={0.55}
-        clearcoatRoughness={0.25}
+        clearcoat={0.28}
+        clearcoatRoughness={0.38}
         transparent
-        opacity={0.55}
+        opacity={0.64}
         normalMap={normalMap}
-        envMapIntensity={1.3}
+        envMapIntensity={0.62}
         polygonOffset
         polygonOffsetFactor={-1}
       />
@@ -136,24 +189,34 @@ function FlowParticles() {
 
   return (
     <points ref={pointsRef} geometry={geometry} visible={progress > 0.01}>
-      <pointsMaterial map={particleTexture} color="#cfe8dd" size={0.68} sizeAttenuation transparent opacity={0.5} depthWrite={false} />
+      <pointsMaterial map={particleTexture} color="#cfe8dd" size={0.44} sizeAttenuation transparent opacity={0.3} depthWrite={false} />
     </points>
   );
 }
 
 export function IrrigationNetwork() {
-  const mainBank = useMemo(() => createRibbon(curve, 10.2, 0.05), []);
-  const branchBank = useMemo(() => createRibbon(branchCurve, 3.6, 0.02, 3), []);
+  const mainBank = useMemo(() => createEdgeBands(curve, 12.4, 8.4, 0.05), []);
+  const mainLining = useMemo(() => createEdgeBands(curve, 8.4, 5.7, 0.07), []);
+  const branchBank = useMemo(() => createEdgeBands(branchCurve, 5.4, 3.25, 0.02, 3), []);
+  const branchLining = useMemo(() => createEdgeBands(branchCurve, 3.25, 1.85, 0.04, 3), []);
+  const [soilColor, soilNormal, soilRoughness] = useChannelMaps("Ground037");
+  const [concreteColor, concreteNormal, concreteRoughness] = useChannelMaps("Concrete032");
   return (
     <group>
       <mesh geometry={mainBank} receiveShadow castShadow>
-        <meshStandardMaterial color="#57503f" roughness={0.98} metalness={0} envMapIntensity={0.25} />
+        <meshStandardMaterial color="#5e5948" map={soilColor} normalMap={soilNormal} roughnessMap={soilRoughness} roughness={1} metalness={0} envMapIntensity={0.18} side={DoubleSide} />
       </mesh>
       <mesh geometry={branchBank} receiveShadow>
-        <meshStandardMaterial color="#514b3c" roughness={1} metalness={0} envMapIntensity={0.2} />
+        <meshStandardMaterial color="#585344" map={soilColor} normalMap={soilNormal} roughnessMap={soilRoughness} roughness={1} metalness={0} envMapIntensity={0.16} side={DoubleSide} />
       </mesh>
-      <ChannelWater path={curve} width={6.2} baseLift={-0.32} fillStart={0} rise={0.26} />
-      <ChannelWater path={branchCurve} width={2.1} baseLift={-0.22} fillStart={0.3} rise={0.17} />
+      <mesh geometry={mainLining} receiveShadow>
+        <meshStandardMaterial color="#88877d" map={concreteColor} normalMap={concreteNormal} roughnessMap={concreteRoughness} roughness={0.92} metalness={0} envMapIntensity={0.25} side={DoubleSide} />
+      </mesh>
+      <mesh geometry={branchLining} receiveShadow>
+        <meshStandardMaterial color="#7b7a70" map={concreteColor} normalMap={concreteNormal} roughnessMap={concreteRoughness} roughness={0.95} metalness={0} envMapIntensity={0.22} side={DoubleSide} />
+      </mesh>
+      <ChannelWater path={curve} width={5.7} baseLift={-0.3} fillStart={0} rise={0.24} />
+      <ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fillStart={0.3} rise={0.15} />
       <FlowParticles />
     </group>
   );

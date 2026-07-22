@@ -72,14 +72,23 @@ export function createCropClumpGeometry({ blades, height, width, lean, spread, s
       const centerX = baseX + direction.x * out;
       const centerZ = baseZ + direction.y * out;
       const centerY = bladeHeight * t - droop;
+      // A shallow centre crease turns each leaf from a flat ribbon into a
+      // folded blade, so close light produces two planes and a real highlight.
+      const crease = halfWidth * 0.32;
       positions.push(centerX + sideways.x * halfWidth, centerY, centerZ + sideways.y * halfWidth);
+      positions.push(centerX + direction.x * crease, centerY, centerZ + direction.y * crease);
       positions.push(centerX - sideways.x * halfWidth, centerY, centerZ - sideways.y * halfWidth);
-      uvs.push(0, t, 1, t);
+      uvs.push(0, t, 0.5, t, 1, t);
     }
 
     for (let segment = 0; segment < segments; segment += 1) {
-      const row = baseIndex + segment * 2;
-      indices.push(row, row + 1, row + 2, row + 1, row + 3, row + 2);
+      const row = baseIndex + segment * 3;
+      indices.push(
+        row, row + 1, row + 3,
+        row + 1, row + 4, row + 3,
+        row + 1, row + 2, row + 4,
+        row + 2, row + 5, row + 4,
+      );
     }
   }
 
@@ -94,7 +103,7 @@ export function createCropClumpGeometry({ blades, height, width, lean, spread, s
 
 /** Per-crop clump presets: believable real-world proportions. */
 export const cropClumpPresets = {
-  rice: { blades: 13, height: 0.62, width: 0.016, lean: 0.16, spread: 0.16, rowSpacing: 0.62, plantSpacing: 0.52 },
+  rice: { blades: 13, height: 0.82, width: 0.02, lean: 0.2, spread: 0.21, rowSpacing: 0.56, plantSpacing: 0.48 },
   corn: { blades: 9, height: 1.85, width: 0.05, lean: 0.3, spread: 0.1, rowSpacing: 0.8, plantSpacing: 0.68 },
   vegetable: { blades: 11, height: 0.26, width: 0.05, lean: 0.2, spread: 0.14, rowSpacing: 0.5, plantSpacing: 0.44 },
   rapeseed: { blades: 8, height: 0.85, width: 0.02, lean: 0.12, spread: 0.09, rowSpacing: 0.55, plantSpacing: 0.52 },

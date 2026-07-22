@@ -4,7 +4,7 @@ All downloaded runtime assets in this repository are CC0. Attribution is not leg
 
 | Asset | Source | License | Runtime use | Downloaded |
 |---|---|---|---|---|
-| Rural Landscape 1K HDR | [Poly Haven](https://polyhaven.com/a/rural_landscape) | [CC0](https://polyhaven.com/license) | Spare — superseded by the procedural golden-hour sky/IBL, not referenced at runtime | 2026-07-19 |
+| Rural Landscape 1K HDR | [Poly Haven](https://polyhaven.com/a/rural_landscape) | [CC0](https://polyhaven.com/license) | Runtime image-based lighting and material reflections; the visible sky remains procedural | 2026-07-19 |
 | Ground 026 1K JPG | [ambientCG](https://ambientcg.com/view?id=Ground026) | [CC0](https://docs.ambientcg.com/license/) | Dry outer terrain | 2026-07-19 |
 | Ground 037 1K JPG | [ambientCG](https://ambientcg.com/view?id=Ground037) | [CC0](https://docs.ambientcg.com/license/) | Field soil and damp canal edges | 2026-07-19 |
 | Concrete 032 1K JPG | [ambientCG](https://ambientcg.com/view?id=Concrete032) | [CC0](https://docs.ambientcg.com/license/) | Pump station and canal structures | 2026-07-19 |

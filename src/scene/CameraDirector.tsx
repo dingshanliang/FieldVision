@@ -6,7 +6,7 @@ import { Raycaster, Vector2, Vector3 } from "three";
 import { fieldById } from "../data/fields";
 import { useFarmStore } from "../state/useFarmStore";
 
-const overview = { position: [268, 82, 304] as const, target: [-26, 30, -40] as const };
+const overview = { position: [210, 86, 223] as const, target: [-8, 2, -18] as const };
 
 export function CameraDirector() {
   const controls = useRef<CameraControlsImpl>(null);
@@ -114,7 +114,7 @@ export function CameraDirector() {
     current.smoothTime = 1.25;
     transitioning.current = true;
     transitionStartedAt.current = performance.now();
-    void current.setLookAt(236, 164, 266, -18, 4, 4, false).then(async () => {
+    void current.setLookAt(244, 152, 276, -18, 4, 4, false).then(async () => {
       if (!isCurrent()) return;
       basePosition.current.set(...overview.position);
       baseTarget.current.set(...overview.target);

@@ -11,10 +11,10 @@ import { visualConfig } from "../config/visual";
 interface CropInstancesProps { field: FieldParcel; selected: boolean }
 
 const baseColors: Record<FieldParcel["cropType"], string> = {
-  rice: "#5e7f33",
-  corn: "#4a702c",
-  vegetable: "#3f7a3a",
-  rapeseed: "#7a8a3c",
+  rice: "#5f7938",
+  corn: "#537a34",
+  vegetable: "#4b8444",
+  rapeseed: "#839649",
 };
 const strawColor = "#b3944a";
 
@@ -29,7 +29,7 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
     [preset, field.id],
   );
   const material = useMemo(() => {
-    const result = new MeshStandardMaterial({ color: "#ffffff", roughness: 0.78, metalness: 0, side: DoubleSide });
+    const result = new MeshStandardMaterial({ color: "#ffffff", roughness: 0.88, metalness: 0, side: DoubleSide, envMapIntensity: 0.35 });
     result.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = { value: 0 };
       shader.uniforms.uWind = { value: visualConfig.windStrength };
@@ -101,7 +101,7 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
     for (let index = 0; index < target; index += 1) {
       const candidate = candidates[Math.floor(index * stride)];
       if (!candidate) continue;
-      const scale = 0.85 + random() * 0.3;
+      const scale = 0.78 + random() * 0.42;
       const matrix = new Matrix4();
       matrix.compose(
         new Vector3(candidate.x + (random() - 0.5) * 0.14, field.elevation + 0.52, candidate.z + (random() - 0.5) * 0.14),

@@ -9,6 +9,7 @@ import { FarmRoads } from "./FarmRoads";
 import { IrrigationNetwork } from "./IrrigationNetwork";
 import { RiskOverlay } from "./RiskOverlay";
 import { Terrain } from "./Terrain";
+import { GroundDetails } from "./GroundDetails";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { visualConfig } from "../config/visual";
 
@@ -31,6 +32,7 @@ export function FarmScene() {
       <Atmosphere />
       <group onPointerMissed={() => { selectField(null); setViewMode("overview"); }}>
         <Terrain />
+        <GroundDetails />
         <FarmRoads />
         <Farmland />
         <IrrigationNetwork />
@@ -48,10 +50,10 @@ export function FarmScene() {
         <EffectComposer multisampling={0} enableNormalPass={false}>
           {[
             ...(dof
-              ? [<DepthOfField key="dof" worldFocusDistance={dof.focus} worldFocusRange={dof.range} focalLength={0.03} bokehScale={3.2} />]
+              ? [<DepthOfField key="dof" worldFocusDistance={dof.focus} worldFocusRange={dof.range} focalLength={0.026} bokehScale={1.55} />]
               : []),
             <Bloom key="bloom" intensity={visualConfig.bloomIntensity} luminanceThreshold={visualConfig.bloomThreshold} mipmapBlur />,
-            <Vignette key="vignette" eskil={false} offset={0.22} darkness={0.34} />,
+            <Vignette key="vignette" eskil={false} offset={0.28} darkness={0.22} />,
           ]}
         </EffectComposer>
       )}

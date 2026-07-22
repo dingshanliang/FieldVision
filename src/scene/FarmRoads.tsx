@@ -21,6 +21,8 @@ const roadPaths: Array<{ points: Array<[number, number]>; width: number }> = [
   { points: [[150, 96], [110, 102], [92, 103]], width: 4.2 }, // pump spur
   { points: [[-165, -104], [-168, 0], [-166, 80], [-150, 122]], width: 5.2 }, // west
   { points: [[-150, 122], [-60, 126], [30, 124], [80, 120]], width: 5.2 }, // north
+  { points: [[-153, -18], [-82, -21], [-10, -22], [63, -20], [154, -15]], width: 4.4 }, // central field track
+  { points: [[-49, -98], [-47, -56], [-48, -20], [-43, 36], [-36, 79], [-30, 118]], width: 3.8 }, // north-south service track
 ];
 
 function createRoadGeometry(points: Array<[number, number]>, width: number) {

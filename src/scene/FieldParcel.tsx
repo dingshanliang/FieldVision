@@ -1,11 +1,12 @@
 import { Html, useTexture } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
-import { ExtrudeGeometry, MeshPhysicalMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Texture, Vector2 } from "three";
+import { CanvasTexture, ExtrudeGeometry, MeshPhysicalMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Texture, Vector2 } from "three";
 import type { WebGLProgramParametersWithUniforms } from "three";
 import type { FieldParcel as FieldParcelType } from "../types/farm";
 import { useFarmStore } from "../state/useFarmStore";
 import { heroIrrigationInlet } from "../data/fields";
+import { seededRandom } from "../utils/geometry";
 import { CropInstances } from "./CropInstances";
 
 interface FieldParcelProps { field: FieldParcelType }
@@ -38,6 +39,40 @@ function pathFromPolygon(polygon: Array<[number, number]>) {
   polygon.forEach(([x, z], index) => (index === 0 ? path.moveTo(x, -z) : path.lineTo(x, -z)));
   path.closePath();
   return path;
+}
+
+function makeCanopyTexture(cropType: FieldParcelType["cropType"]) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  if (context) {
+    context.fillStyle = "#b9baa8";
+    context.fillRect(0, 0, 128, 128);
+    const rowGap = cropType === "corn" ? 18 : cropType === "vegetable" ? 10 : 13;
+    const rowWidth = cropType === "corn" ? 5 : cropType === "vegetable" ? 6 : 4;
+    for (let x = -16; x < 144; x += rowGap) {
+      const gradient = context.createLinearGradient(x, 0, x + rowWidth, 0);
+      gradient.addColorStop(0, "rgba(50, 56, 38, 0.16)");
+      gradient.addColorStop(0.45, "rgba(31, 38, 23, 0.48)");
+      gradient.addColorStop(1, "rgba(50, 56, 38, 0.12)");
+      context.fillStyle = gradient;
+      context.fillRect(x, 0, rowWidth, 128);
+    }
+    const random = seededRandom(cropType.charCodeAt(0) * 631);
+    for (let index = 0; index < 420; index += 1) {
+      const shade = random() > 0.5 ? 255 : 42;
+      context.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${0.025 + random() * 0.07})`;
+      context.fillRect(random() * 128, random() * 128, 0.7 + random() * 1.6, 0.7 + random() * 1.6);
+    }
+  }
+  const texture = new CanvasTexture(canvas);
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.repeat.set(cropType === "corn" ? 7 : 10, cropType === "corn" ? 7 : 10);
+  texture.colorSpace = SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
 }
 
 /** Push every vertex outward from the centroid — good enough for the convex-ish parcels. */
@@ -82,7 +117,13 @@ export function FieldParcel({ field }: FieldParcelProps) {
   const rimGeometry = useMemo(() => {
     const outer = shapeFromPolygon(expandPolygon(field.polygon, 1.35));
     outer.holes.push(pathFromPolygon(field.polygon));
-    const result = new ExtrudeGeometry(outer, { depth: 0.34, bevelEnabled: false });
+    const result = new ExtrudeGeometry(outer, {
+      depth: 0.34,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      bevelSize: 0.16,
+      bevelThickness: 0.12,
+    });
     result.rotateX(-Math.PI / 2);
     result.computeVertexNormals();
     return result;
@@ -95,7 +136,17 @@ export function FieldParcel({ field }: FieldParcelProps) {
     return result;
   }, [field.polygon, isRice]);
 
-  const waterNormalScale = useMemo(() => new Vector2(0.55, 0.55), []);
+  // A dense aerial LOD sits below the individual plants. It prevents thousands
+  // of thin blades collapsing into high-contrast pixels in overview shots, but
+  // disappears for ground-level views where the real row spacing must remain.
+  const cropCanopyGeometry = useMemo(() => {
+    const result = new ShapeGeometry(shapeFromPolygon(expandPolygon(field.polygon, -0.85)), 24);
+    result.rotateX(-Math.PI / 2);
+    return result;
+  }, [field.polygon]);
+  const cropCanopyMap = useMemo(() => makeCanopyTexture(field.cropType), [field.cropType]);
+
+  const waterNormalScale = useMemo(() => new Vector2(0.16, 0.16), []);
 
   const center = useMemo(() => {
     const sum = field.polygon.reduce(([x, z], point) => [x + point[0], z + point[1]], [0, 0]);
@@ -106,12 +157,22 @@ export function FieldParcel({ field }: FieldParcelProps) {
     if (layerMode === "growth") return field.status === "risk" ? "#8a5a30" : field.status === "attention" ? "#7d7040" : "#4a5c34";
     if (layerMode === "moisture") return field.moisture < 21 ? "#7d543a" : field.moisture < 25 ? "#5d5c3c" : "#39584c";
     if (layerMode === "facility") return "#43413a";
-    return isRice ? "#7d6c4d" : "#71624a";
+    return isRice ? "#a18f70" : "#96866b";
   }, [field, isRice, layerMode]);
+
+  const canopyColor = useMemo(() => {
+    if (layerMode === "growth") return field.status === "risk" ? "#827047" : "#526745";
+    if (layerMode === "moisture") return field.moisture < 21 ? "#766247" : "#4b6256";
+    if (layerMode === "facility") return "#54564e";
+    if (field.cropType === "corn") return "#6f8352";
+    if (field.cropType === "vegetable") return "#68916a";
+    if (field.cropType === "rapeseed") return "#89945a";
+    return "#778b58";
+  }, [field, layerMode]);
 
   // A02 starts parched: low, dull water that rises and clears with irrigation.
   const waterLevel = isHero ? 0.435 + irrigationProgress * 0.055 : 0.46;
-  const waterOpacity = 0.86;
+  const waterOpacity = 0.72;
 
   // Hero field: the wetting front advances from the canal inlet — dull stagnant
   // water ahead of the front, clear reflective water behind it, plus a bright
@@ -197,19 +258,38 @@ export function FieldParcel({ field }: FieldParcelProps) {
         <mesh geometry={waterGeometry} position-y={field.elevation + waterLevel} receiveShadow>
           <meshPhysicalMaterial
             ref={waterMaterialRef}
-            color={isHero ? "#ffffff" : "#3d5248"}
-            roughness={isHero ? 0.16 : 0.07}
+            color={isHero ? "#51665a" : "#50645b"}
+            roughness={isHero ? 0.42 : 0.38}
             metalness={0}
-            clearcoat={isHero ? 0.3 : 0.6}
-            clearcoatRoughness={0.22}
+            clearcoat={isHero ? 0.2 : 0.28}
+            clearcoatRoughness={0.38}
             transparent
             opacity={isHero ? 1 : waterOpacity}
             onBeforeCompile={patchWaterShader}
             normalMap={soilNormal}
             normalScale={waterNormalScale}
-            envMapIntensity={isHero ? 0.75 : 1.35}
+            envMapIntensity={isHero ? 0.48 : 0.55}
             polygonOffset
             polygonOffsetFactor={-2}
+          />
+        </mesh>
+      )}
+      {(!selected || (viewMode !== "field-ground" && viewMode !== "irrigation")) && (
+        <mesh
+          geometry={cropCanopyGeometry}
+          position-y={field.elevation + (isRice ? waterLevel + 0.025 : 0.475)}
+          receiveShadow
+        >
+          <meshStandardMaterial
+            color={canopyColor}
+            map={cropCanopyMap}
+            normalMap={soilNormal}
+            roughnessMap={soilRoughness}
+            roughness={0.96}
+            metalness={0}
+            envMapIntensity={0.2}
+            polygonOffset
+            polygonOffsetFactor={-3}
           />
         </mesh>
       )}
