@@ -12,3 +12,6 @@ output/
 docs/.DS_Store
 .codegraph/
 *.tsbuildinfo
+
+# ZCode tool session files (plans/transcripts, not source)
+.zcode/
