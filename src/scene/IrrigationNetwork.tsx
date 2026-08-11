@@ -146,14 +146,13 @@ function ChannelWater({ path, width, baseLift, fill, rise }: { path: CatmullRomC
   );
 }
 
-function FlowParticles({ flowProgress }: { flowProgress: number }) {
+function FlowParticles({ path, flowProgress, count = 42, size = 0.44, lift = -0.1 }: { path: CatmullRomCurve3; flowProgress: number; count?: number; size?: number; lift?: number }) {
   const pointsRef = useRef<Points>(null);
-  const count = 42;
   const geometry = useMemo(() => {
     const result = new BufferGeometry();
     result.setAttribute("position", new BufferAttribute(new Float32Array(count * 3), 3));
     return result;
-  }, []);
+  }, [count]);
   const particleTexture = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 64;
@@ -188,15 +187,15 @@ function FlowParticles({ flowProgress }: { flowProgress: number }) {
     const reveal = Math.min(1, flowProgress * 1.18);
     for (let index = 0; index < count; index += 1) {
       const normalized = (index / count + phaseRef.current) % 1;
-      const point = curve.getPointAt(normalized * reveal);
-      positions.setXYZ(index, point.x, point.y - 0.1, point.z);
+      const point = path.getPointAt(normalized * reveal);
+      positions.setXYZ(index, point.x, point.y + lift, point.z);
     }
     positions.needsUpdate = true;
   });
 
   return (
     <points ref={pointsRef} geometry={geometry} visible={flowProgress > 0.01}>
-      <pointsMaterial map={particleTexture} color="#cfe8dd" size={0.44} sizeAttenuation transparent opacity={0.3} depthWrite={false} />
+      <pointsMaterial map={particleTexture} color="#cfe8dd" size={size} sizeAttenuation transparent opacity={0.3} depthWrite={false} />
     </points>
   );
 }
@@ -226,7 +225,10 @@ export function IrrigationNetwork() {
       </mesh>
       <ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} />
       <ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} />
-      <FlowParticles flowProgress={event.mainChannelProgress} />
+      <FlowParticles path={curve} flowProgress={event.mainChannelProgress} />
+      {/* East branch actually delivers water to A02 — its flow cue must read as
+          strongly as the main canal, not just an opacity change on the surface. */}
+      <FlowParticles path={branchCurve} flowProgress={event.branchChannelProgress} count={24} size={0.28} lift={-0.08} />
     </group>
   );
 }
