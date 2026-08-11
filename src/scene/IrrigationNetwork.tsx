@@ -1,4 +1,4 @@
-import { useFrame, useLoader } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import {
   BufferAttribute,
@@ -15,7 +15,7 @@ import {
   Texture,
   Vector3,
 } from "three";
-import { ktx2Loader } from "./ktx2Loader";
+import { useKtx2 } from "./ktx2Loader";
 import { useFarmStore } from "../state/useFarmStore";
 import { deriveIrrigationEvent } from "../state/irrigationEvent";
 
@@ -85,7 +85,7 @@ function createEdgeBands(path: CatmullRomCurve3, outerWidth: number, innerWidth:
 }
 
 function useWaterNormal(): Texture {
-  const [sourceNormal] = useLoader(ktx2Loader, ["/assets/textures/source/Ground037/Ground037_1K-JPG_NormalGL.ktx2"]) as unknown as [Texture];
+  const [sourceNormal] = useKtx2(["/assets/textures/source/Ground037/Ground037_1K-JPG_NormalGL.ktx2"]) as unknown as [Texture];
   return useMemo(() => {
     const map = sourceNormal.clone();
     map.wrapS = RepeatWrapping;
@@ -96,7 +96,7 @@ function useWaterNormal(): Texture {
 }
 
 function useChannelMaps(asset: "Concrete032" | "Ground037"): [Texture, Texture, Texture] {
-  const [sourceColor, sourceNormal, sourceRoughness] = useLoader(ktx2Loader, [
+  const [sourceColor, sourceNormal, sourceRoughness] = useKtx2([
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Color.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_NormalGL.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Roughness.ktx2`,

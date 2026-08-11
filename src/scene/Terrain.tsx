@@ -1,5 +1,4 @@
-import { useLoader } from "@react-three/fiber";
-import { ktx2Loader } from "./ktx2Loader";
+import { useKtx2 } from "./ktx2Loader";
 import { useMemo } from "react";
 import {
   BufferAttribute,
@@ -32,7 +31,7 @@ function terrainHeightAt(x: number, z: number) {
 }
 
 export function Terrain() {
-  const [sourceColor, sourceNormal, sourceRoughness] = useLoader(ktx2Loader, [
+  const [sourceColor, sourceNormal, sourceRoughness] = useKtx2([
     "/assets/textures/source/Ground026/Ground026_1K-JPG_Color.ktx2",
     "/assets/textures/source/Ground026/Ground026_1K-JPG_NormalGL.ktx2",
     "/assets/textures/source/Ground026/Ground026_1K-JPG_Roughness.ktx2",

@@ -1,6 +1,6 @@
 import { Html } from "@react-three/drei";
-import { useFrame, useLoader } from "@react-three/fiber";
-import { ktx2Loader } from "./ktx2Loader";
+import { useFrame } from "@react-three/fiber";
+import { useKtx2 } from "./ktx2Loader";
 import { useMemo, useRef } from "react";
 import { CanvasTexture, ExtrudeGeometry, MeshPhysicalMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Texture, Vector2 } from "three";
 import type { WebGLProgramParametersWithUniforms } from "three";
@@ -16,7 +16,7 @@ interface FieldParcelProps { field: FieldParcelType }
 type PbrSet = [Texture, Texture, Texture];
 
 function useConfiguredMaps(asset: "Ground037" | "Ground026", repeat: number): PbrSet {
-  const [sourceColor, sourceNormal, sourceRoughness] = useLoader(ktx2Loader, [
+  const [sourceColor, sourceNormal, sourceRoughness] = useKtx2([
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Color.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_NormalGL.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Roughness.ktx2`,

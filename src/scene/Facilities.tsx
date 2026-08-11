@@ -1,6 +1,6 @@
 import { Html, RoundedBox, useGLTF } from "@react-three/drei";
-import { useFrame, useLoader } from "@react-three/fiber";
-import { ktx2Loader } from "./ktx2Loader";
+import { useFrame } from "@react-three/fiber";
+import { useKtx2 } from "./ktx2Loader";
 import { useMemo, useRef } from "react";
 import { ExtrudeGeometry, Group, MeshStandardMaterial, RepeatWrapping, Shape, SRGBColorSpace, Texture } from "three";
 import { useFarmStore } from "../state/useFarmStore";
@@ -9,7 +9,7 @@ import { deriveIrrigationEvent } from "../state/irrigationEvent";
 type PbrSet = [Texture, Texture, Texture];
 
 function useMaterialMaps(asset: "Concrete032" | "Metal025", repeat = 1): PbrSet {
-  const [sourceColor, sourceNormal, sourceRoughness] = useLoader(ktx2Loader, [
+  const [sourceColor, sourceNormal, sourceRoughness] = useKtx2([
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Color.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_NormalGL.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Roughness.ktx2`,

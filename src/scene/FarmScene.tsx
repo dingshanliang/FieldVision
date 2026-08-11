@@ -1,8 +1,5 @@
 import { EffectComposer, Bloom, DepthOfField, Vignette, SMAA, ToneMapping } from "@react-three/postprocessing";
 import { ToneMappingMode } from "postprocessing";
-import { useThree } from "@react-three/fiber";
-import { useLayoutEffect } from "react";
-import { ktx2Loader } from "./ktx2Loader";
 import { useFarmStore } from "../state/useFarmStore";
 import { Atmosphere } from "./Atmosphere";
 import { CameraDirector } from "./CameraDirector";
@@ -37,11 +34,6 @@ export function FarmScene() {
   const demoStep = useFarmStore((state) => state.demoStep);
   const dof = dofPreset(viewMode, demoStep);
   const perf = perfEnabled();
-  const gl = useThree((state) => state.gl);
-  useLayoutEffect(() => {
-    // KTX2 transcode target must be known before any .ktx2 load resolves.
-    ktx2Loader.detectSupport(gl);
-  }, [gl]);
   return (
     <>
       <Atmosphere />
