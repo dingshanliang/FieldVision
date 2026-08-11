@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export type PerformanceTier = "low" | "medium" | "high";
 
-function detectTier(): PerformanceTier {
+export function detectTier(): PerformanceTier {
   if (typeof window === "undefined") return "medium";
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const narrow = window.innerWidth < 900;

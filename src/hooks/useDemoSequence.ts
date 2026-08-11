@@ -55,6 +55,17 @@ export function useDemoSequence() {
     store.getState().setPaused(!store.getState().paused);
   }, [store]);
 
+  /** 现场汇报安全网：中止当前演示、清干净临时状态、回到稳定的基地总览（fv-66y.9）。 */
+  const reset = useCallback(() => {
+    activeController?.abort();
+    activeController = null;
+    const s = store.getState();
+    s.resetDemo();
+    s.applyDemoState("overview");
+    s.setDemoPlaying(false);
+    s.setPaused(false);
+  }, [store]);
+
   /** 到水后的农业时间恢复序列（fv-o6c.11）。到水(D0)→次日D1根区复测→D3冠层复飞→解除。 */
   const runRecovery = useCallback(async (signal: AbortSignal) => {
     const s = store.getState();
@@ -133,5 +144,5 @@ export function useDemoSequence() {
     }
   }, [runRecovery, store]);
 
-  return { play, stop, irrigate, togglePause };
+  return { play, stop, irrigate, togglePause, reset };
 }
