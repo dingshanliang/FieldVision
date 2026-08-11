@@ -24,6 +24,7 @@ import { visualConfig } from "../config/visual";
 import { seededRandom } from "../utils/geometry";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { SafePhotographicHorizon } from "./PhotographicHorizon";
+import { BirdFlock } from "./BirdFlock";
 
 const sunDirection = new Vector3(...visualConfig.sunDirection).normalize();
 
@@ -365,6 +366,7 @@ export function Atmosphere() {
         shadow-radius={5}
       />
       <SafePhotographicHorizon fallback={<TreeLine />} />
+      {tier !== "low" && <BirdFlock />}
       {tier !== "low" && <DustMotes count={tier === "high" ? 240 : 130} />}
     </>
   );
