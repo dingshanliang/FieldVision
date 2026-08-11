@@ -1,57 +1,35 @@
-# KTX2 texture pipeline (fv-66y.10)
+# KTX2 texture pipeline (fv-66y.10) — EXECUTED
 
-Goal: take `public/assets/textures/source/` (≈17 MB of 1K JPGs) to KTX2/Basis so the
-runtime asset total moves from ~22 MB toward the ≤8 MB budget
-(`docs/research/fieldvision-3.0/dev-baseline-perf-budget.md` §3.1/§5.3), with GPU-native
-decode (no per-frame transcode of JPG on the main thread).
+Status: **conversion + loader swap done.** `public/assets/textures/source` went
+17 MB (JPG) → **3.1 MB (KTX2)**; `public/assets` total ~22 MB → **~8.7 MB**.
+The app loads `.ktx2` via three's `KTX2Loader` (transcoder at `/assets/libs/basis/`,
+copied from `node_modules/three/examples/jsm/libs/basis/`).
 
-## Why not auto-run
+## What was done
 
-`toktx`/`basisu`/`gltf-transform` are not installed, and the consumer-side swap
-(KTX2Loader transcoder path + `detectSupport` + per-map colour space) is **runtime**
-behaviour that the repo's delivery rules require verifying in a real browser
-("Use a real browser for visual acceptance"). The in-app-browser guest available to
-the auto-run cannot screenshot/evaluate, so the convert+swap is operator-bound here.
+- `scripts/textures/convert-ktx2.sh` — reproducible converter (ETC1S for all maps;
+  normals at q255, colour/roughness at q200, sRGB OETF for colour). Run with
+  `toktx` from KTX-Software v4.4.2.
+- `src/scene/ktx2Loader.ts` — shared `KTX2Loader` singleton; `FarmScene.tsx` calls
+  `detectSupport(gl)` in a `useLayoutEffect` before loads resolve.
+- Consumers swapped `useTexture` → `useLoader(ktx2Loader, …)` and `.jpg` → `.ktx2`:
+  `Terrain`, `FieldParcel`, `Facilities`, `IrrigationNetwork`.
+- Original JPGs removed (recoverable from git history).
 
-## 1. Convert (operator)
+## Decision log
+
+- **UASTC rejected for normals/roughness**: ~2.3 MB/map vs ~0.3 MB ETC1S, no visible
+  benefit at scene distances, blew the size budget. If normal banding shows up on
+  close inspection, re-encode just `*_NormalGL` with `--encode uastc`.
+- **All ETC1S**: size-optimal, the budget's hard constraint.
+
+## Verify (real desktop browser)
 
 ```bash
-brew install ktx                 # macOS; else grab KTX-Software from KhronosGroup
-bash scripts/textures/convert-ktx2.sh
+pnpm build && pnpm preview      # http://127.0.0.1:4173/?perf=1
 ```
 
-`convert-ktx2.sh` writes `*.ktx2` next to each source JPG with type-correct settings:
-colour → ETC1S/sRGB, normal + roughness → UASTC/linear (precision; normals must not
-band). Verify `du -sh public/assets/textures/source` before vs after.
-
-## 2. Wire the loader (operator — runtime change, verify in a real browser)
-
-a. Serve the Basis transcoder once. Copy `node_modules/three/examples/jsm/libs/basis/basis_transcoder.js`
-   and `basis_transcoder.wasm` under `public/assets/libs/basis/`.
-
-b. Create a shared loader at Canvas level (new small component inside `<Canvas>`, or in
-   `FarmCanvas`) — once per renderer:
-   ```ts
-   import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
-   const ktx2 = new KTX2Loader().setTranscoderPath("/assets/libs/basis/");
-   ktx2.detectSupport(gl);          // gl from useThree
-   ```
-   Provide it via context or a module singleton.
-
-c. In each consumer — `src/scene/IrrigationNetwork.tsx` (`useWaterNormal`,
-   `useChannelMaps`), `src/scene/Terrain.tsx`, `src/scene/FieldParcel.tsx`,
-   `src/scene/Facilities.tsx` — swap `useTexture([…jpg])` → `useLoader(ktx2, […ktx2])`.
-   Keep the existing per-map colour-space rules (colour maps → `SRGBColorSpace`,
-   normal/roughness stay linear) and `RepeatWrapping` repeat values.
-
-d. `pnpm typecheck && pnpm lint && pnpm build`, then open `http://127.0.0.1:4173/?perf=1`
-   in a real desktop browser and confirm:
-   - no banding/dithering on normal maps (UASTC held up);
-   - colour/contrast matches the JPG path (no sRGB/linear flip);
-   - tiling still repeats cleanly on canal/terrain ribbons;
-   - `tex`/`geo` in the perf HUD and total `public/assets` size both dropped.
-
-## 3. Record
-
-Once shipped, note the KTX2 derivatives + transcoder license in `ASSETS.md`
-(sources unchanged — still ambientCG CC0).
+Confirm: scene renders normally (textures intact, no banding on ground/canal
+normals under golden-hour light); perf HUD `tex`/`geo` populated; no console
+errors about the Basis transcoder. If anything regresses, revert this commit —
+the JPGs remain in git history.

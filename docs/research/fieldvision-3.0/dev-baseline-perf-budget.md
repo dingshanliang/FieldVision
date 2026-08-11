@@ -99,7 +99,7 @@
 
 ### 5.3 本次会话已确定量（确定性，机器无关）
 - JS bundle：raw **1.55 MB**，gzip **459 KB**。⚠️ 较 §1.1 的 400 KB 基线漂移 +59 KB，且已**超出 §3.1 的 450 KB 预算 +9 KB**——属本分支既有状态（fv-66y.3 instrumentation 增量 <1 KB gzip）。建议作为独立的 code-splitting/依赖审计 follow-up，不在本票范围。
-- 资产 `public/assets`：**22 MB**（textures/source 17 MB 未变；environment 3.5 MB；models 1.5 MB）。达成 §3.1「≤8 MB」的唯一杠杆仍是 KTX2（见 fv-66y.10）。
+- 资产 `public/assets`：原 22 MB → **~8.7 MB**。textures/source 17 MB（未压缩 JPG）→ **3.1 MB（KTX2/ETC1S）**（fv-66y.10 已执行：`scripts/textures/convert-ktx2.sh` + KTX2Loader swap；JPG 已删，见 git 历史）。environment 3.5 MB、models 1.5 MB、basis transcoder ~0.6 MB。已贴近 §3.1「≤8 MB」目标。
 
 ### 5.4 诚实状态
 instrumentation（§2/§2b 的 renderer.info 钩子）**已交付且单测覆盖**；实时 fps/draw 的权威数值须在真实桌面浏览器按 §5.2 采集。尝试在内嵌 in-app browser guest 中采样时，其 WebGL rAF 循环未驱动（`frames` 心跳恒为 0，且该 guest 的 evaluate/screenshot 被禁），进一步印证测量须在真实浏览器进行，该 guest 亦非汇报目标机。

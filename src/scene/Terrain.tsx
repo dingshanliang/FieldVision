@@ -1,4 +1,5 @@
-import { useTexture } from "@react-three/drei";
+import { useLoader } from "@react-three/fiber";
+import { ktx2Loader } from "./ktx2Loader";
 import { useMemo } from "react";
 import {
   BufferAttribute,
@@ -31,11 +32,11 @@ function terrainHeightAt(x: number, z: number) {
 }
 
 export function Terrain() {
-  const [sourceColor, sourceNormal, sourceRoughness] = useTexture([
-    "/assets/textures/source/Ground026/Ground026_1K-JPG_Color.jpg",
-    "/assets/textures/source/Ground026/Ground026_1K-JPG_NormalGL.jpg",
-    "/assets/textures/source/Ground026/Ground026_1K-JPG_Roughness.jpg",
-  ]) as [Texture, Texture, Texture];
+  const [sourceColor, sourceNormal, sourceRoughness] = useLoader(ktx2Loader, [
+    "/assets/textures/source/Ground026/Ground026_1K-JPG_Color.ktx2",
+    "/assets/textures/source/Ground026/Ground026_1K-JPG_NormalGL.ktx2",
+    "/assets/textures/source/Ground026/Ground026_1K-JPG_Roughness.ktx2",
+  ]) as unknown as [Texture, Texture, Texture];
   const [colorMap, normalMap, roughnessMap] = useMemo(() => {
     const maps = [sourceColor.clone(), sourceNormal.clone(), sourceRoughness.clone()] as [Texture, Texture, Texture];
     maps.forEach((texture) => { texture.wrapS = RepeatWrapping; texture.wrapT = RepeatWrapping; texture.repeat.set(20, 16); });

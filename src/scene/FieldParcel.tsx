@@ -1,5 +1,6 @@
-import { Html, useTexture } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
+import { useFrame, useLoader } from "@react-three/fiber";
+import { ktx2Loader } from "./ktx2Loader";
 import { useMemo, useRef } from "react";
 import { CanvasTexture, ExtrudeGeometry, MeshPhysicalMaterial, Path, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace, Texture, Vector2 } from "three";
 import type { WebGLProgramParametersWithUniforms } from "three";
@@ -15,11 +16,11 @@ interface FieldParcelProps { field: FieldParcelType }
 type PbrSet = [Texture, Texture, Texture];
 
 function useConfiguredMaps(asset: "Ground037" | "Ground026", repeat: number): PbrSet {
-  const [sourceColor, sourceNormal, sourceRoughness] = useTexture([
-    `/assets/textures/source/${asset}/${asset}_1K-JPG_Color.jpg`,
-    `/assets/textures/source/${asset}/${asset}_1K-JPG_NormalGL.jpg`,
-    `/assets/textures/source/${asset}/${asset}_1K-JPG_Roughness.jpg`,
-  ]) as PbrSet;
+  const [sourceColor, sourceNormal, sourceRoughness] = useLoader(ktx2Loader, [
+    `/assets/textures/source/${asset}/${asset}_1K-JPG_Color.ktx2`,
+    `/assets/textures/source/${asset}/${asset}_1K-JPG_NormalGL.ktx2`,
+    `/assets/textures/source/${asset}/${asset}_1K-JPG_Roughness.ktx2`,
+  ]) as unknown as PbrSet;
   return useMemo(() => {
     const maps = [sourceColor.clone(), sourceNormal.clone(), sourceRoughness.clone()] as PbrSet;
     maps.forEach((texture) => { texture.wrapS = RepeatWrapping; texture.wrapT = RepeatWrapping; texture.repeat.set(repeat, repeat); });
