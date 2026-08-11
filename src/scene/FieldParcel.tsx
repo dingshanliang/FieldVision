@@ -89,9 +89,16 @@ function expandPolygon(polygon: Array<[number, number]>, distance: number) {
 }
 
 export function FieldParcel({ field }: FieldParcelProps) {
-  const [soilColor, soilNormal, soilRoughness] = useConfiguredMaps("Ground037", 0.06);
-  const [rimColor, rimNormal, rimRoughness] = useConfiguredMaps("Ground037", 0.18);
-  const [dryColor, dryNormal, dryRoughness] = useConfiguredMaps("Ground026", 0.08);
+  // Soil texture repeats stay at 1.0 (one tile per parcel = no visible repeat
+  // seam). Higher repeats (tried 2.5) gave close-up grain but stamped an
+  // obvious tiled "panel" pattern across every field in the aerial overview —
+  // the canopy LOD was reusing soilNormal/soilRoughness too, so the soil tiles
+  // bled through the green cover. Close-up grain now relies on normalScale
+  // instead of raw texel density. (soilNormal still shared with the water
+  // surface at normalScale 0.16; canopy no longer uses it — see below.)
+  const [soilColor, soilNormal, soilRoughness] = useConfiguredMaps("Ground037", 1.0);
+  const [rimColor, rimNormal, rimRoughness] = useConfiguredMaps("Ground037", 1.0);
+  const [dryColor, dryNormal, dryRoughness] = useConfiguredMaps("Ground026", 1.0);
   const selectedFieldId = useFarmStore((state) => state.selectedFieldId);
   const hoveredFieldId = useFarmStore((state) => state.hoveredFieldId);
   const layerMode = useFarmStore((state) => state.layerMode);
@@ -151,6 +158,9 @@ export function FieldParcel({ field }: FieldParcelProps) {
   const cropCanopyMap = useMemo(() => makeCanopyTexture(field.cropType), [field.cropType]);
 
   const waterNormalScale = useMemo(() => new Vector2(0.16, 0.16), []);
+  // Soil normals were invisible at repeat 0.06; now that the map tiles at ~3cm,
+  // scale them up so the grain reads in close-ups instead of washing out.
+  const soilNormalScale = useMemo(() => new Vector2(0.9, 0.9), []);
 
   const center = useMemo(() => {
     const sum = field.polygon.reduce(([x, z], point) => [x + point[0], z + point[1]], [0, 0]);
@@ -240,6 +250,7 @@ export function FieldParcel({ field }: FieldParcelProps) {
           color={soilTint}
           map={soilColor}
           normalMap={soilNormal}
+          normalScale={soilNormalScale}
           roughnessMap={soilRoughness}
           roughness={1}
           metalness={0}
@@ -289,8 +300,6 @@ export function FieldParcel({ field }: FieldParcelProps) {
           <meshStandardMaterial
             color={canopyColor}
             map={cropCanopyMap}
-            normalMap={soilNormal}
-            roughnessMap={soilRoughness}
             roughness={0.96}
             metalness={0}
             envMapIntensity={0.2}

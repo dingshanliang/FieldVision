@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { Raycaster, Vector2, Vector3 } from "three";
 import { fieldById } from "../data/fields";
 import { useFarmStore } from "../state/useFarmStore";
+import { droneWorldPosition } from "./dronePosition";
 
 const overview = { position: [210, 86, 223] as const, target: [-8, 2, -18] as const };
 
@@ -42,6 +43,10 @@ export function CameraDirector() {
   const userHoldUntil = useRef(0);
   const breathingRampStart = useRef(0);
   const scratchPosition = useRef(new Vector3());
+  // Drone-scan follow shot state — see useFrame.
+  const followPos = useRef(new Vector3());
+  const followTarget = useRef(new Vector3());
+  const scratchFollow = useRef(new Vector3());
 
   const TRANSITION_MAX_MS = 4_200;
   const BREATHING_RAMP_MS = 1_500;
@@ -149,7 +154,17 @@ export function CameraDirector() {
     }
     const field = fieldById[selectedFieldId];
     if (!field) return;
-    if (demoStep === "drone-scan" || demoStep === "recovered") {
+    if (demoStep === "drone-scan") {
+      // Don't fly to a fixed overlook — useFrame tracks the drone live. Seed
+      // the follow frame from wherever the camera actually is now, so the
+      // hand-off from the previous beat eases in instead of snapping, and
+      // clear any in-flight transition so arrival detection stops fighting us.
+      current.getPosition(followPos.current, false);
+      current.getTarget(followTarget.current, false);
+      transitioning.current = false;
+      return;
+    }
+    if (demoStep === "recovered") {
       flyTo([66, 52, -20], [23, 4, -66], true);
       return;
     }
@@ -161,12 +176,29 @@ export function CameraDirector() {
     flyTo(preset.position, preset.target, true);
   }, [demoStep, flyTo, introComplete, selectedFieldId, viewMode]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     const current = controls.current;
     if (!current) return;
     if (!useFarmStore.getState().introComplete) return;
     // QA screenshot scripts drive the camera directly — never fight them.
     if (new URLSearchParams(window.location.search).has("qa")) return;
+    // Drone-scan follow shot: ride behind/above the drone and look at it,
+    // instead of the scripted breathing drift. The drone publishes its live
+    // world position every frame (see Drone.tsx), so we just poll it here.
+    // This early-returns before the transition/breathing state machine below,
+    // which is for the fixed-preset beats only.
+    if (useFarmStore.getState().demoStep === "drone-scan") {
+      const drone = droneWorldPosition;
+      scratchFollow.current.set(drone.x - 22, drone.y + 16, drone.z - 22);
+      followPos.current.lerp(scratchFollow.current, Math.min(1, delta * 2.5));
+      followTarget.current.lerp(drone, Math.min(1, delta * 4));
+      current.setLookAt(
+        followPos.current.x, followPos.current.y, followPos.current.z,
+        followTarget.current.x, followTarget.current.y, followTarget.current.z,
+        false,
+      );
+      return;
+    }
     const now = performance.now();
     if (transitioning.current) {
       // Arrival check by distance — immune to stale rest promises and to

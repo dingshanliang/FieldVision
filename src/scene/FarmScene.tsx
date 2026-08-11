@@ -1,4 +1,5 @@
-import { EffectComposer, Bloom, DepthOfField, Vignette } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, DepthOfField, Vignette, SMAA, ToneMapping } from "@react-three/postprocessing";
+import { ToneMappingMode } from "postprocessing";
 import { useFarmStore } from "../state/useFarmStore";
 import { Atmosphere } from "./Atmosphere";
 import { CameraDirector } from "./CameraDirector";
@@ -49,18 +50,25 @@ export function FarmScene() {
       </group>
       <CameraDirector />
       {tier !== "low" && (
-        // DepthOfField adds and removes a depth-aware pass as the demo changes
-        // shots. Multisampled composer targets cannot safely blit that changing
-        // depth/stencil attachment in Chrome/WebGL, which flooded the render
-        // loop with GL_INVALID_OPERATION errors after the irrigation cut.
-        // Canvas DPR + native antialiasing still provide edge smoothing.
+        // DepthOfField is mounted/unmounted per beat. Multisampled composer
+        // targets cannot safely blit that swapping depth/stencil attachment in
+        // Chrome/WebGL (GL_INVALID_OPERATION), so multisampling stays 0. SMAA
+        // below restores edge AA without needing an MSAA target — Canvas
+        // antialias:true does NOT reach the composer's intermediate target, so
+        // without SMAA every leaf/wire/ridgeline edge would alias.
         <EffectComposer multisampling={0} enableNormalPass={false}>
           {[
             ...(dof
               ? [<DepthOfField key="dof" worldFocusDistance={dof.focus} worldFocusRange={dof.range} focalLength={0.026} bokehScale={1.55} />]
               : []),
             <Bloom key="bloom" intensity={visualConfig.bloomIntensity} luminanceThreshold={visualConfig.bloomThreshold} mipmapBlur />,
-            <Vignette key="vignette" eskil={false} offset={0.28} darkness={0.22} />,
+            // ToneMapping owns ACES: renderer.toneMapping is NoToneMapping so the
+            // scene renders linear into the composer, then this pass maps HDR→LDR
+            // exactly once (otherwise ACES is bypassed by the composer and the
+            // frame goes to screen linear/washed-out).
+            <ToneMapping key="tone" mode={ToneMappingMode.ACES_FILMIC} />,
+            <SMAA key="smaa" />,
+            <Vignette key="vignette" eskil={false} offset={0.32} darkness={0.26} />,
           ]}
         </EffectComposer>
       )}

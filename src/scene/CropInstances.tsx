@@ -49,11 +49,20 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
             vec2 clumpOffset = vec2(0.0);
           #endif
           float heightRatio = clamp(position.y / uHeight, 0.0, 1.0);
-          float phase = clumpOffset.x * 0.35 + clumpOffset.y * 0.61;
-          float sway = sin(uTime * 1.7 + phase) + 0.55 * sin(uTime * 3.3 + phase * 1.7);
-          float bendAmount = heightRatio * heightRatio * sway * uWind * 0.14;
-          transformed.x += bendAmount;
-          transformed.z += bendAmount * 0.55;`);
+          // Gust envelope: slow temporal + spatial modulation so wind arrives in
+          // waves rather than a constant uniform bend. Neighbouring clumps fall
+          // out of sync and the field reads as moving air, not a synced wiggle.
+          float gust = 0.55 + 0.45 * sin(uTime * 0.27 + clumpOffset.x * 0.04 + clumpOffset.y * 0.06);
+          // Independent X/Z phases replace the old single linear phase so each
+          // axis sways on its own frequency and offset — no more lockstep.
+          float phaseX = clumpOffset.x * 0.35 + clumpOffset.y * 0.61;
+          float phaseZ = clumpOffset.x * 0.51 - clumpOffset.y * 0.29;
+          float swayX = sin(uTime * 1.7 + phaseX) + 0.55 * sin(uTime * 3.3 + phaseX * 1.7);
+          float swayZ = sin(uTime * 1.4 + phaseZ + 1.3) + 0.4 * sin(uTime * 2.8 + phaseZ * 1.5);
+          float bendX = heightRatio * heightRatio * swayX * uWind * gust * 0.14;
+          float bendZ = heightRatio * heightRatio * swayZ * uWind * gust * 0.11;
+          transformed.x += bendX;
+          transformed.z += bendZ;`);
       result.userData.shader = shader;
     };
     return result;

@@ -343,7 +343,11 @@ export function Atmosphere() {
       <fogExp2 attach="fog" args={[visualConfig.fogColor, visualConfig.fogDensity]} />
       <MorningSky />
       <GoldenHourEnvironment />
-      <hemisphereLight args={[new Color("#b8cad4"), new Color("#4c4a3b"), 0.88]} />
+      {/* Hemisphere dropped from 0.88 → 0.5: the HDRI already provides IBL, and
+          a strong hemi fill was flattening shadow contrast (the "looks plastic /
+          washed-out" symptom). Lower fill restores volumetric depth in canopy
+          gaps, furrows and under eaves. */}
+      <hemisphereLight args={[new Color("#b8cad4"), new Color("#4c4a3b"), 0.5]} />
       <directionalLight
         position={[sunDirection.x * 260, sunDirection.y * 260, sunDirection.z * 260]}
         intensity={visualConfig.sunIntensity}

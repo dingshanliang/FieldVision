@@ -52,7 +52,13 @@ export function Terrain() {
     const meadow = new Color("#909a78");
     const dry = new Color("#9d896b");
     const hill = new Color("#7e8980");
+    // 中景农田色，融入顶点色替代旧的 MidFarmland 矩形板——不规则边界、随
+    // 地形起伏，不再像彩色贴纸。
+    const cropRice = new Color("#6d8a3e");
+    const cropGolden = new Color("#9a8a4a");
+    const cropDeep = new Color("#5f7e3a");
     const scratch = new Color();
+    const cropScratch = new Color();
 
     if (positions) {
       for (let index = 0; index < positions.count; index += 1) {
@@ -66,6 +72,20 @@ export function Terrain() {
         scratch.copy(grass).lerp(meadow, patch);
         scratch.lerp(dry, smoothstep(0.55, 0.9, fbm2D(x * 0.03 - 11, z * 0.03 + 29, 2, 47) * 0.5 + 0.5) * 0.55);
         scratch.lerp(hill, hilliness);
+        // 中景农田环带（r≈140–305）：噪声驱动的块状农田融入草地，替代旧的
+        // MidFarmland 矩形板。farmBand 控制环带进出渐变（无硬边），fieldMask
+        // 造块状农田与草地间隙，hue 在稻绿/深绿/熟黄间过渡。
+        const farmR = Math.hypot(x, z);
+        const farmBand = smoothstep(140, 180, farmR) * (1 - smoothstep(250, 305, farmR));
+        if (farmBand > 0.002) {
+          const fieldNoise = fbm2D(x * 0.006 + 100, z * 0.006 + 50, 3, 71);
+          const fieldMask = smoothstep(0.08, 0.42, fieldNoise);
+          if (fieldMask > 0) {
+            const hue = fbm2D(x * 0.0035 - 30, z * 0.0035 + 80, 2, 13) * 0.5 + 0.5;
+            cropScratch.copy(hue < 0.4 ? cropDeep : hue < 0.7 ? cropRice : cropGolden);
+            scratch.lerp(cropScratch, farmBand * fieldMask * 0.9);
+          }
+        }
         colors.push(scratch.r, scratch.g, scratch.b);
       }
       result.setAttribute("color", new BufferAttribute(new Float32Array(colors), 3));

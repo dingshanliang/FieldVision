@@ -17,6 +17,7 @@ import {
   Vector3,
 } from "three";
 import { visualConfig } from "../config/visual";
+import { droneWorldPosition } from "./dronePosition";
 import { useFarmStore } from "../state/useFarmStore";
 
 const rotorNames = ["Rotor_FL", "Rotor_FR", "Rotor_RL", "Rotor_RR"];
@@ -194,6 +195,9 @@ export function Drone() {
       // Pitch with vertical speed plus a slight nose-down cruise attitude.
       pitch = Math.max(-0.22, Math.min(0.22, (ahead.y - point.y) * -2.2)) + 0.07;
     }
+    // Publish the live world position so the camera follow shot (drone-scan
+    // beat) can track the drone without going through the store each frame.
+    droneWorldPosition.copy(group.current.position);
     scratch.targetEuler.set(pitch, yaw, roll);
     scratch.targetQuaternion.setFromEuler(scratch.targetEuler);
     group.current.quaternion.slerp(scratch.targetQuaternion, Math.min(1, delta * (scanning ? 2.2 : 4.5)));

@@ -1,40 +1,17 @@
 import { useMemo } from "react";
-import { BoxGeometry, Color, InstancedMesh, Matrix4, PlaneGeometry, Quaternion, Vector3 } from "three";
+import { BoxGeometry, Color, InstancedMesh, Matrix4, Quaternion, Vector3 } from "three";
 import { seededRandom } from "../utils/geometry";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 
 /**
- * 连续农田世界（fv-o6c.10，方向 C 分层 LOD）。
- * 在英雄地块外围补三层，消除"孤立地块 + 大面积底板"感：
- *  - 中景：相邻农田条带（不同作物/色相），让英雄地块成为连片稻区的一部分；
- *  - 远景：村庄轮廓（建筑尺度锚点）+ 远田色带；
- *  - 远景→地平线的色温收敛交给现有 fogExp2（暖→冷自动完成）。
- * 全部 InstancedMesh，按性能档降级（low 仅保留中景少量条带）。
+ * 连续农田世界（fv-o6c.10）。
+ * 中景农田色块已融入 Terrain 顶点色（噪声驱动的块状农田随地形起伏，不再
+ * 用独立矩形板——那种纯色面片在航拍下像彩色贴纸，且平铺后互相 Z-fight）。
+ * 这里只保留远景的村庄轮廓与远田色带，让英雄地块成为连片稻区的一部分；
+ * 远景→地平线的色温收敛交给 fogExp2。
  */
 
 const CROP_COLORS = ["#5f7938", "#6a8a3e", "#839649", "#b39a4a", "#7d8f4a", "#537a34"];
-
-interface StripSpec { x: number; z: number; rotation: number; width: number; depth: number; color: string }
-
-function buildFieldStrips(count: number, ringMin: number, ringMax: number): StripSpec[] {
-  const random = seededRandom(20260723);
-  const strips: StripSpec[] = [];
-  let attempts = 0;
-  while (strips.length < count && attempts < count * 8) {
-    attempts += 1;
-    const angle = random() * Math.PI * 2;
-    const radius = ringMin + random() * (ringMax - ringMin);
-    strips.push({
-      x: Math.cos(angle) * radius,
-      z: Math.sin(angle) * radius * 0.78, // 椭圆环，匹配地形宽高比
-      rotation: random() * Math.PI,
-      width: 26 + random() * 34,
-      depth: 18 + random() * 26,
-      color: CROP_COLORS[Math.floor(random() * CROP_COLORS.length)]!,
-    });
-  }
-  return strips;
-}
 
 interface HouseSpec { x: number; z: number; rotation: number; scale: number }
 
@@ -56,39 +33,12 @@ function buildVillage(center: [number, number], count: number, spread: number): 
 
 const MATRIX = new Matrix4();
 const UP = new Vector3(0, 1, 0);
-const QUAT = new Quaternion();
 const POS = new Vector3();
 const SCL = new Vector3();
 const TMP_COLOR = new Color();
 
-/** 单位平面靠 instanceMatrix 缩放成条带，摊在地面。 */
-const UNIT_PLANE = new PlaneGeometry(1, 1);
 const WALL_BOX = new BoxGeometry(1, 1, 1);
 const ROOF_BOX = new BoxGeometry(1, 1, 1);
-
-function applyStrips(mesh: InstancedMesh | null, strips: StripSpec[]) {
-  if (!mesh) return;
-  strips.forEach((s, i) => {
-    QUAT.setFromAxisAngle(UP, s.rotation);
-    POS.set(s.x, 0.12, s.z);
-    SCL.set(s.width, s.depth, 1);
-    MATRIX.compose(POS, QUAT, SCL);
-    mesh.setMatrixAt(i, MATRIX);
-    TMP_COLOR.set(s.color).offsetHSL(0, (Math.sin(i * 12.9) - 0.5) * 0.04, (Math.cos(i * 7.3) - 0.5) * 0.05);
-    mesh.setColorAt(i, TMP_COLOR);
-  });
-  mesh.instanceMatrix.needsUpdate = true;
-  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-}
-
-function MidFarmland({ count }: { count: number }) {
-  const strips = useMemo(() => buildFieldStrips(count, 158, 248), [count]);
-  return (
-    <instancedMesh args={[UNIT_PLANE, undefined, strips.length]} receiveShadow ref={(m: InstancedMesh | null) => applyStrips(m, strips)}>
-      <meshStandardMaterial roughness={0.95} metalness={0} side={2} />
-    </instancedMesh>
-  );
-}
 
 function Village({ center, count, spread }: { center: [number, number]; count: number; spread: number }) {
   const houses = useMemo(() => buildVillage(center, count, spread), [center, count, spread]);
@@ -148,10 +98,8 @@ function DistantFields() {
 
 export function WorldLod() {
   const tier = usePerformanceTier();
-  const fieldCount = tier === "high" ? 110 : tier === "medium" ? 70 : 36;
   return (
     <group>
-      <MidFarmland count={fieldCount} />
       {tier !== "low" && (
         <>
           <Village center={[-262, -158]} count={tier === "high" ? 16 : 11} spread={60} />

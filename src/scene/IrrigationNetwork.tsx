@@ -172,13 +172,22 @@ function FlowParticles({ flowProgress }: { flowProgress: number }) {
     return texture;
   }, []);
 
-  useFrame(({ clock }) => {
+  // Accumulated phase + eased speed: the current accelerates from a stand when
+  // the gate opens, instead of every particle already moving at working speed
+  // the instant it becomes visible. elapsedTime*speed would teleport particles
+  // whenever the speed target changes, so the phase is integrated per-frame.
+  const speedRef = useRef(0);
+  const phaseRef = useRef(0);
+  useFrame((_, delta) => {
     if (!pointsRef.current || flowProgress <= 0.01) return;
     const positions = pointsRef.current.geometry.attributes.position;
     if (!positions) return;
+    const targetSpeed = 0.05 + flowProgress * 0.05;
+    speedRef.current += (targetSpeed - speedRef.current) * Math.min(1, delta * 1.5);
+    phaseRef.current = (phaseRef.current + delta * speedRef.current) % 1;
+    const reveal = Math.min(1, flowProgress * 1.18);
     for (let index = 0; index < count; index += 1) {
-      const normalized = (index / count + clock.elapsedTime * (0.05 + flowProgress * 0.05)) % 1;
-      const reveal = Math.min(1, flowProgress * 1.18);
+      const normalized = (index / count + phaseRef.current) % 1;
       const point = curve.getPointAt(normalized * reveal);
       positions.setXYZ(index, point.x, point.y - 0.1, point.z);
     }

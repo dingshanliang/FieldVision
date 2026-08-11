@@ -1,7 +1,7 @@
 import { Html, RoundedBox, useGLTF, useTexture } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
-import { ExtrudeGeometry, Group, RepeatWrapping, Shape, SRGBColorSpace, Texture } from "three";
+import { ExtrudeGeometry, Group, MeshStandardMaterial, RepeatWrapping, Shape, SRGBColorSpace, Texture } from "three";
 import { useFarmStore } from "../state/useFarmStore";
 import { deriveIrrigationEvent } from "../state/irrigationEvent";
 
@@ -45,6 +45,19 @@ function PumpStation() {
   const progress = useFarmStore((state) => state.irrigationProgress);
   const event = deriveIrrigationEvent(progress);
   const active = event.pumpProgress > 0;
+  const statusRef = useRef<MeshStandardMaterial>(null);
+  useFrame(({ clock }) => {
+    const mat = statusRef.current;
+    if (!mat) return;
+    const p = event.pumpProgress;
+    if (p <= 0) { mat.emissiveIntensity = 0; return; }
+    // Smoothstep ramp so the strip warms up instead of snapping full-bright;
+    // a starting flicker decays through the first half of the ramp as the
+    // pump "catches" — reads as a motor spinning up, not a switch.
+    const ease = p * p * (3 - 2 * p);
+    const flicker = p < 0.5 ? (1 - p / 0.5) * (Math.sin(clock.elapsedTime * 28) * 0.5 + 0.5) : 0;
+    mat.emissiveIntensity = ease * 3.2 + flicker * 0.7;
+  });
   return (
     <group position={[82, 1.6, 108]} rotation={[0, -0.16, 0]}>
       {/* concrete apron */}
@@ -79,7 +92,7 @@ function PumpStation() {
       {/* status strip */}
       <mesh position={[0, 6.05, 4.45]}>
         <boxGeometry args={[6.4, 0.28, 0.1]} />
-        <meshStandardMaterial color={active ? "#7ff0a5" : "#5c665f"} emissive={active ? "#3fdf7c" : "#000000"} emissiveIntensity={active ? 3.2 : 0} />
+        <meshStandardMaterial ref={statusRef} color={active ? "#7ff0a5" : "#5c665f"} emissive={active ? "#3fdf7c" : "#000000"} emissiveIntensity={0} />
       </mesh>
       {/* outlet pipe running north into the canal */}
       <mesh position={[-5.2, 1.5, -7.2]} rotation={[Math.PI / 2.18, 0, 0]} castShadow>
@@ -131,7 +144,17 @@ function Gate() {
   const [concreteColor, concreteNormal, concreteRoughness] = useMaterialMaps("Concrete032", 1.2);
   const progress = useFarmStore((state) => state.irrigationProgress);
   const event = deriveIrrigationEvent(progress);
+  const ledRef = useRef<MeshStandardMaterial>(null);
+  // Ease-in-out on the gate leaf so it lifts with mechanical weight
+  // (slow → fast → settle) instead of a linear crawl.
   const opening = event.gateProgress;
+  const openingEase = opening * opening * (3 - 2 * opening);
+  useFrame(() => {
+    const mat = ledRef.current;
+    if (!mat) return;
+    const g = event.gateProgress;
+    mat.emissiveIntensity = g <= 0 ? 0 : (g * g * (3 - 2 * g)) * 1.6;
+  });
   return (
     <group position={[69, 0.38, -18]} rotation={[0, 0.18, 0]}>
       <RoundedBox args={[8.4, 0.55, 5.2]} radius={0.14} smoothness={2} position-y={0.04} receiveShadow>
@@ -154,7 +177,7 @@ function Gate() {
         <meshStandardMaterial color="#5c625e" metalness={0.22} roughness={0.62} envMapIntensity={0.4} />
       </mesh>
       {/* rising gate leaf */}
-      <mesh position={[0, 2.1 + opening * 2.7, 0]} castShadow>
+      <mesh position={[0, 2.1 + openingEase * 2.7, 0]} castShadow>
         <boxGeometry args={[4.6, 3.6, 0.32]} />
         <meshStandardMaterial color="#96907f" map={colorMap} normalMap={normalMap} roughnessMap={roughnessMap} metalness={0.6} roughness={0.5} envMapIntensity={0.6} />
       </mesh>
@@ -167,7 +190,7 @@ function Gate() {
         <meshStandardMaterial color="#b8934a" metalness={0.75} roughness={0.32} envMapIntensity={0.8} />
       </mesh>
       {[-1.72, -0.86, 0, 0.86, 1.72].map((x) => (
-        <mesh key={x} position={[x, 2.1 + opening * 2.7, 0.21]}>
+        <mesh key={x} position={[x, 2.1 + openingEase * 2.7, 0.21]}>
           <sphereGeometry args={[0.09, 8, 6]} />
           <meshStandardMaterial color="#363b39" metalness={0.72} roughness={0.34} />
         </mesh>
@@ -194,7 +217,7 @@ function Gate() {
       </RoundedBox>
       <mesh position={[2.2, 6.15, 0.25]}>
         <boxGeometry args={[0.58, 0.42, 0.04]} />
-        <meshStandardMaterial color={event.gateProgress > 0 ? "#72d69b" : "#303936"} emissive={event.gateProgress > 0 ? "#3fbd75" : "#000000"} emissiveIntensity={event.gateProgress > 0 ? 1.6 : 0} />
+        <meshStandardMaterial ref={ledRef} color={event.gateProgress > 0 ? "#72d69b" : "#303936"} emissive={event.gateProgress > 0 ? "#3fbd75" : "#000000"} emissiveIntensity={0} />
       </mesh>
     </group>
   );
