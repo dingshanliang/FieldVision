@@ -222,6 +222,17 @@ function FieldWorker() {
           <meshStandardMaterial color="#313933" roughness={0.94} />
         </mesh>
       ))}
+      {/* Arms (fv-66y.7): the main anatomy tell that broke the silhouette.
+          Shoulders at the body top, a slight forward reach for an inspection
+          stoop, shirt colour matched to the torso. Thin capsule = lower arm. */}
+      {[-1, 1].map((side) => (
+        <group key={`arm-${side}`} position={[side * 0.27, 1.5, 0]} rotation={[0.32, 0, side * 0.14]}>
+          <mesh position-y={-0.3} castShadow>
+            <capsuleGeometry args={[0.06, 0.54, 4, 8]} />
+            <meshStandardMaterial color="#405c50" roughness={0.92} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
