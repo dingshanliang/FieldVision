@@ -211,3 +211,7 @@ button { color: inherit; }
   .demo-timeline { right: 14px; bottom: 14px; left: 14px; grid-template-columns: auto 1fr; }.timeline-track { min-width: 0; }.timeline-track span { display: none; }
   .evidence-slip { width: 150px; }.evidence-slip dl div:first-child,.evidence-slip dl div:last-child { display: none; }.cause-marker { min-width: 118px; }
 }
+
+/* 大屏/汇报模式（fv-66y.8）：?present=1 隐藏操作层后，连光标也隐去，画面纯净。 */
+.app-shell.is-present,
+.app-shell.is-present canvas { cursor: none; }

@@ -24,21 +24,31 @@ function AutoDemo() {
   return null;
 }
 
+/** 大屏/汇报模式（fv-66y.8）：?present=1 隐藏全部操作层，只留 3D 画面 + 电影粒，供投影/录屏。 */
+function presentMode(): boolean {
+  return typeof window !== "undefined" && new URLSearchParams(window.location.search).has("present");
+}
+
 export function App() {
+  const present = presentMode();
   return (
-    <main className="app-shell">
+    <main className={`app-shell${present ? " is-present" : ""}`}>
       <FarmCanvas />
       <AutoDemo />
       <div className="grain" aria-hidden="true" />
-      <TopBar />
-      <LayerSwitcher />
-      <FieldDetailPanel />
-      <DemoTimeline />
-      <PresenterControls />
-      <TimeCutCard />
-      <DemoPrecheck />
+      {present ? null : (
+        <>
+          <TopBar />
+          <LayerSwitcher />
+          <FieldDetailPanel />
+          <DemoTimeline />
+          <PresenterControls />
+          <TimeCutCard />
+          <DemoPrecheck />
+          <div className="canvas-status" aria-live="polite">三维基地已就绪。可选择地块、切换图层或播放完整演示。</div>
+        </>
+      )}
       <PerfHud />
-      <div className="canvas-status" aria-live="polite">三维基地已就绪。可选择地块、切换图层或播放完整演示。</div>
     </main>
   );
 }
