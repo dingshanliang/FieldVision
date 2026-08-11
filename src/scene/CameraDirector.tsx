@@ -1,7 +1,7 @@
 import { CameraControls } from "@react-three/drei";
 import CameraControlsImpl from "camera-controls";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Raycaster, Vector2, Vector3 } from "three";
 import { fieldById } from "../data/fields";
 import { useFarmStore } from "../state/useFarmStore";
@@ -11,6 +11,12 @@ const overview = { position: [210, 86, 223] as const, target: [-8, 2, -18] as co
 
 export function CameraDirector() {
   const controls = useRef<CameraControlsImpl>(null);
+  // Drone POV prototype (fv-66y.6): opt-in via ?pov=1 so the accepted follow
+  // shot is unchanged until the first-person cut is signed off.
+  const povEnabled = useMemo(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("pov"),
+    [],
+  );
   const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);
   const selectedFieldId = useFarmStore((state) => state.selectedFieldId);
@@ -189,6 +195,22 @@ export function CameraDirector() {
     // which is for the fixed-preset beats only.
     if (useFarmStore.getState().demoStep === "drone-scan") {
       const drone = droneWorldPosition;
+      const scanProgress = useFarmStore.getState().scanProgress;
+      // Prototype first-person cut (fv-66y.6, ?pov=1): mid-scan, briefly look
+      // through the drone's gimbal — ahead + down along its survey line — so
+      // the dry patch comes into frame "as the drone sees it", then cut back to
+      // the third-person follow. Default off; the accepted follow shot is
+      // unchanged until the cut is signed off.
+      const POV_START = 0.42;
+      const POV_END = 0.66;
+      if (povEnabled && scanProgress >= POV_START && scanProgress <= POV_END) {
+        current.setLookAt(
+          drone.x, drone.y - 0.6, drone.z,
+          drone.x + 5.7, drone.y - 16, drone.z - 5.7,
+          false,
+        );
+        return;
+      }
       scratchFollow.current.set(drone.x - 22, drone.y + 16, drone.z - 22);
       followPos.current.lerp(scratchFollow.current, Math.min(1, delta * 2.5));
       followTarget.current.lerp(drone, Math.min(1, delta * 4));
