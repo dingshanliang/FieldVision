@@ -1,4 +1,4 @@
-import { RoundedBox } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { useMemo } from "react";
 import {
   CatmullRomCurve3,
@@ -7,6 +7,7 @@ import {
   DodecahedronGeometry,
   InstancedMesh,
   Matrix4,
+  Mesh,
   Quaternion,
   TubeGeometry,
   Vector3,
@@ -164,38 +165,21 @@ function UtilityLine() {
 }
 
 function FarmUtilityVehicle() {
-  return (
-    <group position={[121, 0.58, 100]} rotation={[0, -1.42, 0]}>
-      <RoundedBox args={[2.15, 0.65, 4.7]} radius={0.06} smoothness={2} position-y={0.78} castShadow receiveShadow>
-        <meshStandardMaterial color="#566349" roughness={0.78} metalness={0.16} envMapIntensity={0.38} />
-      </RoundedBox>
-      <RoundedBox args={[1.95, 1.28, 1.65]} radius={0.07} smoothness={2} position={[0, 1.55, -0.7]} castShadow>
-        <meshStandardMaterial color="#6d7557" roughness={0.66} metalness={0.14} envMapIntensity={0.42} />
-      </RoundedBox>
-      <mesh position={[0, 1.66, -1.56]} rotation={[-0.1, 0, 0]}>
-        <boxGeometry args={[1.7, 0.72, 0.07]} />
-        <meshPhysicalMaterial color="#6f8884" roughness={0.2} metalness={0.08} transmission={0.08} transparent opacity={0.78} />
-      </mesh>
-      <RoundedBox args={[1.82, 0.22, 1.85]} radius={0.04} smoothness={2} position={[0, 1.0, 1.08]} receiveShadow>
-        <meshStandardMaterial color="#4a523d" roughness={0.86} />
-      </RoundedBox>
-      {[-1.08, 1.08].flatMap((x) => [-1.42, 1.38].map((z) => (
-        <group key={`${x}-${z}`} position={[x, 0.55, z]} rotation={[0, 0, Math.PI / 2]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[0.48, 0.48, 0.32, 18]} />
-            <meshStandardMaterial color="#20231f" roughness={0.98} />
-          </mesh>
-          <mesh position-y={x > 0 ? 0.18 : -0.18}>
-            <cylinderGeometry args={[0.19, 0.19, 0.04, 14]} />
-            <meshStandardMaterial color="#74776f" roughness={0.55} metalness={0.58} />
-          </mesh>
-        </group>
-      )))}
-      <RoundedBox args={[1.45, 0.11, 1.22]} radius={0.02} smoothness={2} position={[0, 2.32, -0.72]} castShadow>
-        <meshStandardMaterial color="#4b5141" roughness={0.78} />
-      </RoundedBox>
-    </group>
-  );
+  const { scene } = useGLTF("/assets/models/fieldvision-utility-vehicle.glb");
+  // Clone the cached GLTF scene before enabling shadows so it doesn't leak
+  // into other consumers of the same URL.
+  const model = useMemo(() => {
+    const cloned = scene.clone(true);
+    cloned.traverse((obj) => {
+      const mesh = obj as Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+    return cloned;
+  }, [scene]);
+  return <primitive object={model} position={[121, 0.58, 100]} rotation={[0, -1.42, 0]} />;
 }
 
 function FieldWorker() {

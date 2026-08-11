@@ -14,10 +14,11 @@ All downloaded runtime assets in this repository are CC0. Attribution is not leg
 | Hero Canal Inlet GLB | Project-generated via Blender script `scripts/blender/create_hero_assets_2.py` (fv-o6c.9) | Project-owned (self-authored) | A02 进水口节制闸（翼墙+闸板+启闭机+标尺+警示带）；`public/assets/models/fieldvision-canal-inlet.glb` | 2026-07-23 |
 | Hero Culvert GLB | Project-generated via Blender script `scripts/blender/create_hero_assets_2.py` (fv-o6c.9) | Project-owned (self-authored) | 渠边机耕路箱涵（barrel+八字翼墙+消力池+路堤）；`public/assets/models/fieldvision-culvert.glb` | 2026-07-23 |
 | Hero Rice Cluster GLB | Project-generated via Blender script `scripts/blender/create_hero_assets_2.py` (fv-o6c.9) | Project-owned (self-authored) | A02 近景前景英雄水稻丛（分蘖+叶片+稻穗）；`public/assets/models/fieldvision-rice-cluster.glb` | 2026-07-23 |
+| Utility Vehicle GLB | Project-generated via Blender script `scripts/blender/create_utility_vehicle.py` (fv-66y.12, Blender 自制) | Project-owned (self-authored) | 机耕路比例锚点农用 utility truck（chassis+cab+cargo bed+4 轮+防滚架+大灯/尾灯）；`public/assets/models/fieldvision-utility-vehicle.glb` | 2026-08-12 |
 
 ## Processing policy
 
 - Source packages are reduced to the maps used by the browser build.
 - Geometry assets will be exported from Blender as uncompressed GLB, then receive one Meshopt pass.
-- Color/emissive textures use ETC1S where visual comparison permits; normal and ORM textures use UASTC.
+- Color/emissive textures use ETC1S where visual comparison permits. Normals/ORM default to ETC1S (q255 for normals to preserve directional precision); bump a specific map to UASTC only if banding appears (fv-66y.10).
 - Draco and Meshopt are alternatives. This project does not stack both compression schemes.
