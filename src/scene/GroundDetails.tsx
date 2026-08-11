@@ -1,3 +1,4 @@
+import { RoundedBox } from "@react-three/drei";
 import { useMemo } from "react";
 import {
   CatmullRomCurve3,
@@ -165,22 +166,19 @@ function UtilityLine() {
 function FarmUtilityVehicle() {
   return (
     <group position={[121, 0.58, 100]} rotation={[0, -1.42, 0]}>
-      <mesh position-y={0.78} castShadow receiveShadow>
-        <boxGeometry args={[2.15, 0.65, 4.7]} />
+      <RoundedBox args={[2.15, 0.65, 4.7]} radius={0.06} smoothness={2} position-y={0.78} castShadow receiveShadow>
         <meshStandardMaterial color="#566349" roughness={0.78} metalness={0.16} envMapIntensity={0.38} />
-      </mesh>
-      <mesh position={[0, 1.55, -0.7]} castShadow>
-        <boxGeometry args={[1.95, 1.28, 1.65]} />
+      </RoundedBox>
+      <RoundedBox args={[1.95, 1.28, 1.65]} radius={0.07} smoothness={2} position={[0, 1.55, -0.7]} castShadow>
         <meshStandardMaterial color="#6d7557" roughness={0.66} metalness={0.14} envMapIntensity={0.42} />
-      </mesh>
+      </RoundedBox>
       <mesh position={[0, 1.66, -1.56]} rotation={[-0.1, 0, 0]}>
         <boxGeometry args={[1.7, 0.72, 0.07]} />
         <meshPhysicalMaterial color="#6f8884" roughness={0.2} metalness={0.08} transmission={0.08} transparent opacity={0.78} />
       </mesh>
-      <mesh position={[0, 1.0, 1.08]} receiveShadow>
-        <boxGeometry args={[1.82, 0.22, 1.85]} />
+      <RoundedBox args={[1.82, 0.22, 1.85]} radius={0.04} smoothness={2} position={[0, 1.0, 1.08]} receiveShadow>
         <meshStandardMaterial color="#4a523d" roughness={0.86} />
-      </mesh>
+      </RoundedBox>
       {[-1.08, 1.08].flatMap((x) => [-1.42, 1.38].map((z) => (
         <group key={`${x}-${z}`} position={[x, 0.55, z]} rotation={[0, 0, Math.PI / 2]}>
           <mesh castShadow>
@@ -193,10 +191,9 @@ function FarmUtilityVehicle() {
           </mesh>
         </group>
       )))}
-      <mesh position={[0, 2.32, -0.72]} castShadow>
-        <boxGeometry args={[1.45, 0.11, 1.22]} />
+      <RoundedBox args={[1.45, 0.11, 1.22]} radius={0.02} smoothness={2} position={[0, 2.32, -0.72]} castShadow>
         <meshStandardMaterial color="#4b5141" roughness={0.78} />
-      </mesh>
+      </RoundedBox>
     </group>
   );
 }
