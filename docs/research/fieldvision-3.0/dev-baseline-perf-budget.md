@@ -80,3 +80,27 @@
 
 ## 4. 结论
 当前 dev 基线在体积上的最大风险是 **17 MB 未压缩源纹理**；运行分级逻辑与作物/后期降级策略已成型且与故事顺序解耦。3.0 资产与连续世界实现（fv-o6c.9/10）应把"纹理 KTX2 化 + 体积 ≤ 8 MB"作为硬预算，运行 fps 等精确指标待 DevTools 会话补齐后定稿。
+
+## 5. 运行时 instrumentation 与测量协议（fv-66y.3 · 2026-08-12）
+
+> 本节兑现 §2 末尾与 §2b 列出的「`renderer.info` 调试钩子未暴露」跟进项。
+
+### 5.1 交付：`?perf=1` 实时 HUD
+- URL 带 `?perf=1` 时挂载 `<PerfProbe/>`（Canvas 内，每帧采样帧时、每 500ms 读 `gl.info`）与 `<PerfHud/>`（右下角固定覆盖层）。无该参数时**挂载跳过**，零运行时成本。
+- HUD 字段：`frames`（心跳，>0 即证明 R3F 循环在驱动探针）/ `fps` / `p10 fps` / `draw`（draw calls）/ `tris` / `tex` / `geo` / `prog`。
+- fps/p10 计算抽成纯函数 `computeFpsStats`，由 `src/scene/perfStats.test.ts` 单测（稳态 60Hz、10% 卡顿拉低 p10、空窗/零和返回 0 不产生 Infinity）。
+- 同时把实时 sample 暴露到 `window.__perf`，便于在控制台读取/录制。
+
+### 5.2 在真实汇报机上测量（协议）
+1. `pnpm build && pnpm preview`，Chrome/Safari 打开 `http://127.0.0.1:4173/?perf=1`，窗口 1440×900（high 档）。
+2. **low 档**：窗口宽 <900px，或系统开启 `prefers-reduced-motion`。**medium 档**：`hardwareConcurrency` 5–7 的设备。
+3. 逐章节读 HUD（overview → enter → drone-scan → irrigation → recovery）：draw calls 与 fps 随章节变化，需分章节记录。
+4. 与 §3.2 预算对照：high draw ≤120 / ≥50fps；medium draw ≤80 / ≥30fps；low ≥24fps。
+
+### 5.3 本次会话已确定量（确定性，机器无关）
+- JS bundle：raw **1.55 MB**，gzip **459 KB**。⚠️ 较 §1.1 的 400 KB 基线漂移 +59 KB，且已**超出 §3.1 的 450 KB 预算 +9 KB**——属本分支既有状态（fv-66y.3 instrumentation 增量 <1 KB gzip）。建议作为独立的 code-splitting/依赖审计 follow-up，不在本票范围。
+- 资产 `public/assets`：**22 MB**（textures/source 17 MB 未变；environment 3.5 MB；models 1.5 MB）。达成 §3.1「≤8 MB」的唯一杠杆仍是 KTX2（见 fv-66y.10）。
+
+### 5.4 诚实状态
+instrumentation（§2/§2b 的 renderer.info 钩子）**已交付且单测覆盖**；实时 fps/draw 的权威数值须在真实桌面浏览器按 §5.2 采集。尝试在内嵌 in-app browser guest 中采样时，其 WebGL rAF 循环未驱动（`frames` 心跳恒为 0，且该 guest 的 evaluate/screenshot 被禁），进一步印证测量须在真实浏览器进行，该 guest 亦非汇报目标机。
+

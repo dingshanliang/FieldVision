@@ -1,4 +1,5 @@
 import { FarmCanvas } from "../scene/FarmCanvas";
+import { PerfHud } from "../scene/PerfInstrumentation";
 import { DemoTimeline } from "../ui/DemoTimeline";
 import { FieldDetailPanel } from "../ui/FieldDetailPanel";
 import { LayerSwitcher } from "../ui/LayerSwitcher";
@@ -34,6 +35,7 @@ export function App() {
       <DemoTimeline />
       <PresenterControls />
       <TimeCutCard />
+      <PerfHud />
       <div className="canvas-status" aria-live="polite">三维基地已就绪。可选择地块、切换图层或播放完整演示。</div>
     </main>
   );

@@ -17,6 +17,8 @@ import { HeroAssets } from "./HeroAssets";
 import { WorldLod } from "./WorldLod";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { visualConfig } from "../config/visual";
+import { PerfProbe } from "./PerfInstrumentation";
+import { perfEnabled } from "./perfStats";
 
 /** Cinematic shallow focus for the close-up beats; wide shots stay fully sharp. */
 function dofPreset(viewMode: string, demoStep: string) {
@@ -31,6 +33,7 @@ export function FarmScene() {
   const viewMode = useFarmStore((state) => state.viewMode);
   const demoStep = useFarmStore((state) => state.demoStep);
   const dof = dofPreset(viewMode, demoStep);
+  const perf = perfEnabled();
   return (
     <>
       <Atmosphere />
@@ -49,6 +52,7 @@ export function FarmScene() {
         <SpatialEvidence />
       </group>
       <CameraDirector />
+      {perf && <PerfProbe />}
       {tier !== "low" && (
         // DepthOfField is mounted/unmounted per beat. Multisampled composer
         // targets cannot safely blit that swapping depth/stencil attachment in
