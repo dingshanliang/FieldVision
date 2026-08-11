@@ -62,10 +62,11 @@ export function FarmScene() {
               ? [<DepthOfField key="dof" worldFocusDistance={dof.focus} worldFocusRange={dof.range} focalLength={0.026} bokehScale={1.55} />]
               : []),
             <Bloom key="bloom" intensity={visualConfig.bloomIntensity} luminanceThreshold={visualConfig.bloomThreshold} mipmapBlur />,
-            // ToneMapping owns ACES: renderer.toneMapping is NoToneMapping so the
-            // scene renders linear into the composer, then this pass maps HDR→LDR
-            // exactly once (otherwise ACES is bypassed by the composer and the
-            // frame goes to screen linear/washed-out).
+            // This pass owns ACES on med/high. The EffectComposer forces
+            // renderer.toneMapping = NoToneMapping for its lifetime (restoring
+            // the ACESFilmic baseline from FarmCanvas on unmount, for low tier),
+            // so the scene renders linear into the composer and ACES is applied
+            // exactly once here. Full contract documented in FarmCanvas.tsx.
             <ToneMapping key="tone" mode={ToneMappingMode.ACES_FILMIC} />,
             <SMAA key="smaa" />,
             <Vignette key="vignette" eskil={false} offset={0.32} darkness={0.26} />,
