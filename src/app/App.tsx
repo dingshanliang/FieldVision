@@ -1,6 +1,7 @@
 import { FarmCanvas } from "../scene/FarmCanvas";
 import { PerfHud } from "../scene/PerfInstrumentation";
 import { DemoPrecheck } from "../ui/DemoPrecheck";
+import { SoundToggle } from "../ui/SoundToggle";
 import { DemoTimeline } from "../ui/DemoTimeline";
 import { FieldDetailPanel } from "../ui/FieldDetailPanel";
 import { LayerSwitcher } from "../ui/LayerSwitcher";
@@ -45,6 +46,7 @@ export function App() {
           <PresenterControls />
           <TimeCutCard />
           <DemoPrecheck />
+          <SoundToggle />
           <div className="canvas-status" aria-live="polite">三维基地已就绪。可选择地块、切换图层或播放完整演示。</div>
         </>
       )}
