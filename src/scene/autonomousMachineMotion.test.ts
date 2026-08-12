@@ -24,9 +24,9 @@ describe("autonomous machine motion", () => {
     expect(turning.speedScale).toBeLessThan(working.speedScale);
   });
 
-  it("stops the inspection robot at the simulated obstacle and requests takeover", () => {
-    const before = evaluateMachineMotion("inspection-robot", "coordinated-patrol", 0.48, createMotionSample());
-    const stopped = evaluateMachineMotion("inspection-robot", "coordinated-patrol", 0.82, createMotionSample());
+  it("stops the tractor at the simulated obstacle while inspection continues", () => {
+    const before = evaluateMachineMotion("inspection-robot", "coordinated-patrol", 0.82, createMotionSample());
+    const stopped = evaluateMachineMotion("tractor-seeder", "coordinated-patrol", 0.82, createMotionSample());
 
     expect(before.phase).toBe("working");
     expect(stopped.phase).toBe("exception");

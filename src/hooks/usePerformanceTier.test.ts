@@ -15,6 +15,7 @@ function stubDevice({
   vi.stubGlobal("window", {
     innerWidth: width,
     devicePixelRatio: pixelRatio,
+    location: { search: "" },
     matchMedia: vi.fn(() => ({ matches: reducedMotion })),
   });
   vi.stubGlobal("navigator", { hardwareConcurrency: cores });
@@ -41,6 +42,12 @@ describe("detectTier", () => {
   it("uses high for a wide, capable device at the pixel-ratio boundary", () => {
     stubDevice({ width: 900, cores: 8, pixelRatio: 2.5 });
     expect(detectTier()).toBe("high");
+  });
+
+  it.each(["high", "medium", "low"] as const)("allows deterministic %s-tier acceptance", (tier) => {
+    stubDevice();
+    window.location.search = `?tier=${tier}`;
+    expect(detectTier()).toBe(tier);
   });
 
   it.each([{ cores: 7 }, { pixelRatio: 2.6 }])("uses medium for balanced device %j", (device) => {

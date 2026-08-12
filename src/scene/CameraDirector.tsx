@@ -175,7 +175,7 @@ export function CameraDirector() {
     if (viewMode === "overview" || !selectedFieldId) {
       const machineShot = smartMachineCameraForChapter(smartFarmChapter);
       if (machineShot) {
-        flyTo(machineShot.position, machineShot.target, true);
+        flyTo(machineShot.position, machineShot.target, !REDUCED_MOTION);
         return;
       }
       const shot = smartFarmChapter === "base-online"
@@ -183,7 +183,7 @@ export function CameraDirector() {
         : smartFarmChapter === "daily-plan"
           ? smartPlanOverview
           : overview;
-      flyTo(shot.position, shot.target, true);
+      flyTo(shot.position, shot.target, !REDUCED_MOTION);
       return;
     }
     const field = fieldById[selectedFieldId];
@@ -199,7 +199,7 @@ export function CameraDirector() {
       return;
     }
     if (demoStep === "recovered") {
-      flyTo([66, 52, -20], [23, 4, -66], true);
+      flyTo([66, 52, -20], [23, 4, -66], !REDUCED_MOTION);
       return;
     }
     const preset = viewMode === "field-ground" || demoStep === "inspect-risk"
@@ -207,7 +207,7 @@ export function CameraDirector() {
       : viewMode === "irrigation" && field.cameraPresets.irrigationInlet
         ? field.cameraPresets.irrigationInlet
         : field.cameraPresets.aerial;
-    flyTo(preset.position, preset.target, true);
+    flyTo(preset.position, preset.target, !REDUCED_MOTION);
   }, [demoStep, flyTo, introComplete, selectedFieldId, smartFarmChapter, viewMode]);
 
   useFrame(({ clock }, delta) => {

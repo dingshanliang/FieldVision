@@ -95,6 +95,9 @@ export function evaluateMachineMotion(
   }
 
   if (id === "tractor-seeder") {
+    if (chapter === "coordinated-patrol") {
+      writeAlong(TRACTOR_ROW_B, 1, sample); sample.phase = "exception"; sample.speedScale = 0; sample.exceptionCode = "OBSTACLE_STOP"; return sample;
+    }
     if (chapter !== "autonomous-operations") {
       writeAlong(TRACTOR_ROW_B, 1, sample); sample.phase = "working"; sample.implementDown = true; sample.speedScale = 0.45; return sample;
     }
@@ -106,11 +109,9 @@ export function evaluateMachineMotion(
   }
 
   if (id === "inspection-robot") {
-    const stoppedAt = chapter === "coordinated-patrol" && p >= 0.68;
-    writeAlong(ROBOT_ROUTE, stoppedAt ? 0.8 : Math.min(0.8, p), sample);
-    sample.phase = stoppedAt ? "exception" : "working";
-    sample.speedScale = stoppedAt ? 0 : 0.46;
-    sample.exceptionCode = stoppedAt ? "OBSTACLE_STOP" : null;
+    writeAlong(ROBOT_ROUTE, Math.min(0.8, p), sample);
+    sample.phase = "working";
+    sample.speedScale = 0.46;
     return sample;
   }
 

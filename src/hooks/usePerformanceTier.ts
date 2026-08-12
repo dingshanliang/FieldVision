@@ -4,6 +4,8 @@ export type PerformanceTier = "low" | "medium" | "high";
 
 export function detectTier(): PerformanceTier {
   if (typeof window === "undefined") return "medium";
+  const forced = new URLSearchParams(window.location?.search ?? "").get("tier");
+  if (forced === "high" || forced === "medium" || forced === "low") return forced;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const narrow = window.innerWidth < 900;
   const cores = navigator.hardwareConcurrency || 4;

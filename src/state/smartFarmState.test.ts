@@ -112,14 +112,14 @@ describe("smart farm canonical chapter snapshots", () => {
     expect(useFarmStore.getState().tasks["SOW-B03"]?.progress).toBe(before.tasks["SOW-B03"]?.progress);
   });
 
-  it("stops only the patrol robot for the simulated obstacle", () => {
+  it("stops only the B03 tractor for the simulated obstacle", () => {
     const patrol = getSmartFarmChapterSnapshot("coordinated-patrol");
 
-    expect(patrol.tasks["PATROL-A03"]).toMatchObject({
+    expect(patrol.tasks["SOW-B03"]).toMatchObject({
       status: "exception",
       exception: { code: "OBSTACLE_STOP" },
     });
-    expect(patrol.tasks["SOW-B03"]?.status).toBe("running");
+    expect(patrol.tasks["PATROL-A03"]?.status).toBe("running");
     expect(patrol.tasks["MAINT-EAST"]?.status).toBe("running");
   });
 });
