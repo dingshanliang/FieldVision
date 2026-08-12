@@ -284,22 +284,20 @@ function Warehouse() {
         <meshStandardMaterial color="#84796a" roughness={0.85} envMapIntensity={0.35} />
       </RoundedBox>
       <GableRoof width={23.4} height={3} depth={14.4} y={6.6} color="#414a44" />
-      {/* sliding door + windows on the front face */}
-      <mesh position={[0, 2.9, 6.62]} castShadow>
-        <boxGeometry args={[7, 5, 0.3]} />
-        <meshStandardMaterial color="#3c4c44" roughness={0.5} metalness={0.35} />
-      </mesh>
-      {[-2.5, -1.5, -0.5, 0.5, 1.5, 2.5].map((x) => (
-        <mesh key={x} position={[x, 2.9, 6.81]}>
-          <boxGeometry args={[0.05, 4.7, 0.04]} />
-          <meshStandardMaterial color="#68736c" metalness={0.34} roughness={0.58} />
-        </mesh>
-      ))}
-      {[-7.5, 7.5].map((x) => (
-        <mesh key={x} position={[x, 4.3, 6.62]}>
-          <boxGeometry args={[2.4, 1.4, 0.2]} />
-          <meshStandardMaterial color="#2d3a36" roughness={0.4} metalness={0.3} />
-        </mesh>
+      {/* 双开间出库门：直接升级既有 STORE-01，不叠加第二座机库。 */}
+      {[-4, 4].map((doorX) => (
+        <group key={doorX} position={[doorX, 2.9, 6.62]}>
+          <mesh castShadow>
+            <boxGeometry args={[6.5, 5, 0.3]} />
+            <meshStandardMaterial color="#3c4c44" roughness={0.5} metalness={0.35} />
+          </mesh>
+          {[-2.3, -1.15, 0, 1.15, 2.3].map((x) => (
+            <mesh key={x} position={[x, 0, 0.19]}>
+              <boxGeometry args={[0.05, 4.7, 0.04]} />
+              <meshStandardMaterial color="#68736c" metalness={0.34} roughness={0.58} />
+            </mesh>
+          ))}
+        </group>
       ))}
     </group>
   );

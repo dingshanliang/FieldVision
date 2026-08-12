@@ -8,6 +8,8 @@ import { useFarmStore } from "../state/useFarmStore";
 import { droneWorldPosition } from "./dronePosition";
 
 const overview = { position: [210, 86, 223] as const, target: [-8, 2, -18] as const };
+const smartYardOverview = { position: [18, 52, 194] as const, target: [-94, 3, 104] as const };
+const smartPlanOverview = { position: [146, 88, 238] as const, target: [-42, 3, 52] as const };
 // The URL cannot change without a navigation; parse the QA escape hatch once,
 // not on every rendered frame.
 const QA_MODE = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("qa");
@@ -27,6 +29,7 @@ export function CameraDirector() {
   const selectedFieldId = useFarmStore((state) => state.selectedFieldId);
   const viewMode = useFarmStore((state) => state.viewMode);
   const demoStep = useFarmStore((state) => state.demoStep);
+  const smartFarmChapter = useFarmStore((state) => state.smartFarmChapter);
   const introComplete = useFarmStore((state) => state.introComplete);
   const setIntroComplete = useFarmStore((state) => state.setIntroComplete);
   const setDemoStep = useFarmStore((state) => state.setDemoStep);
@@ -169,7 +172,12 @@ export function CameraDirector() {
     if (!current || !introComplete) return;
     current.smoothTime = 0.72;
     if (viewMode === "overview" || !selectedFieldId) {
-      flyTo(overview.position, overview.target, true);
+      const shot = smartFarmChapter === "base-online"
+        ? smartYardOverview
+        : smartFarmChapter === "daily-plan"
+          ? smartPlanOverview
+          : overview;
+      flyTo(shot.position, shot.target, true);
       return;
     }
     const field = fieldById[selectedFieldId];
@@ -194,7 +202,7 @@ export function CameraDirector() {
         ? field.cameraPresets.irrigationInlet
         : field.cameraPresets.aerial;
     flyTo(preset.position, preset.target, true);
-  }, [demoStep, flyTo, introComplete, selectedFieldId, viewMode]);
+  }, [demoStep, flyTo, introComplete, selectedFieldId, smartFarmChapter, viewMode]);
 
   useFrame(({ clock }, delta) => {
     const current = controls.current;
