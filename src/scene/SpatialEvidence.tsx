@@ -27,7 +27,7 @@ const RISK_RING: [number, number, number][] = Array.from({ length: 49 }, (_, i) 
 const TREND_LABEL: Record<"down" | "up" | "stable", string> = { down: "↓ 偏低", up: "↑ 回升", stable: "→ 稳定" };
 const PHASE_RANK: Record<RecoveryPhase, number> = { none: 0, arrived: 1, "d1-root": 2, "d3-reflight": 3, resolved: 4 };
 
-function Pin({ position, color, height = 4, children }: { position: [number, number, number]; color: string; height?: number; children?: ReactNode }) {
+function Pin({ position, color, height = 4, labelOffset = [0, 0, 0], children }: { position: [number, number, number]; color: string; height?: number; labelOffset?: [number, number, number]; children?: ReactNode }) {
   return (
     <group position={position}>
       <mesh position={[0, height / 2, 0]}>
@@ -39,7 +39,7 @@ function Pin({ position, color, height = 4, children }: { position: [number, num
         <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.6} roughness={0.4} />
       </mesh>
       {children && (
-        <Html position={[0, height + 1.1, 0]} center distanceFactor={66} zIndexRange={[36, 6]}>
+        <Html position={[labelOffset[0], height + 1.1 + labelOffset[1], labelOffset[2]]} center distanceFactor={66} zIndexRange={[36, 6]}>
           {children}
         </Html>
       )}
@@ -49,7 +49,7 @@ function Pin({ position, color, height = 4, children }: { position: [number, num
 
 function SourceChip({ color, title, lines, dayTag }: { color: string; title: string; lines: string[]; dayTag?: string }) {
   return (
-    <div className="evidence-chip">
+    <div className="evidence-chip evidence-chip--compact">
       <div className="evidence-chip__head">
         <span className="evidence-dot" style={{ background: color }} />
         <strong>{title}</strong>
@@ -75,6 +75,7 @@ export function SpatialEvidence() {
   const showGround = analysisVisible && groundConfirmed(evidence.scanReveal) && evidence.riskEvidenceStrength > 0.04;
   const showDiagnosis = showGround && PHASE_RANK[recoveryPhase] < PHASE_RANK["d1-root"];
   const showRecovery = analysisVisible && PHASE_RANK[recoveryPhase] >= PHASE_RANK["d1-root"];
+  const showPointReadouts = !showRecovery;
 
   return (
     <group visible={demoStep !== "overview" && demoStep !== "intro" && demoStep !== "select-field"}>
@@ -88,32 +89,38 @@ export function SpatialEvidence() {
             <group key={`probe-${i}`}>
               <Line points={[[pos[0], pos[1] + 4, pos[2]], RISK_CENTER]} color={SOURCE_STYLE.rootVwc.color} lineWidth={1} transparent opacity={0.4} />
               <Pin position={pos} color={SOURCE_STYLE.rootVwc.color} height={4}>
-                <SourceChip
-                  color={SOURCE_STYLE.rootVwc.color}
-                  title={`根区探头 P${i + 1}`}
-                  lines={[`VWC ${phase.rootVwc.value}% · 10cm`, TREND_LABEL[phase.rootVwc.trend]]}
-                  dayTag={phase.rootVwc.dayTag}
-                />
+                {i === 0 && showPointReadouts ? (
+                  <SourceChip
+                    color={SOURCE_STYLE.rootVwc.color}
+                    title="根区探头组"
+                    lines={[`P1–P3 · VWC ${phase.rootVwc.value}%`, `10cm · ${TREND_LABEL[phase.rootVwc.trend]}`]}
+                    dayTag={phase.rootVwc.dayTag}
+                  />
+                ) : null}
               </Pin>
             </group>
           ))}
 
-          <Pin position={FIELD_TUBE} color={SOURCE_STYLE.fieldLevel.color} height={4}>
-            <SourceChip
-              color={SOURCE_STYLE.fieldLevel.color}
-              title={SOURCE_STYLE.fieldLevel.label}
-              lines={[`田间水位 ${phase.fieldLevel.cm}cm`, phase.fieldLevel.cm < 0 ? "低于田面" : "田面浅水"]}
-              dayTag={phase.fieldLevel.dayTag}
-            />
+          <Pin position={FIELD_TUBE} color={SOURCE_STYLE.fieldLevel.color} height={4} labelOffset={[-3, 0, 0]}>
+            {showPointReadouts ? (
+              <SourceChip
+                color={SOURCE_STYLE.fieldLevel.color}
+                title={SOURCE_STYLE.fieldLevel.label}
+                lines={[`田间水位 ${phase.fieldLevel.cm}cm`, phase.fieldLevel.cm < 0 ? "低于田面" : "田面浅水"]}
+                dayTag={phase.fieldLevel.dayTag}
+              />
+            ) : null}
           </Pin>
 
           <Pin position={CHANNEL_GAUGE} color={SOURCE_STYLE.channel.color} height={4.4}>
-            <SourceChip
-              color={SOURCE_STYLE.channel.color}
-              title={SOURCE_STYLE.channel.label}
-              lines={[`水位 ${phase.channel.cm}cm`, phase.channel.arrived ? `已到水 ${phase.channel.arrivedAt}` : "未到水"]}
-              dayTag={phase.channel.dayTag}
-            />
+            {showPointReadouts ? (
+              <SourceChip
+                color={SOURCE_STYLE.channel.color}
+                title={SOURCE_STYLE.channel.label}
+                lines={[`水位 ${phase.channel.cm}cm`, phase.channel.arrived ? `已到水 ${phase.channel.arrivedAt}` : "未到水"]}
+                dayTag={phase.channel.dayTag}
+              />
+            ) : null}
           </Pin>
         </>
       )}

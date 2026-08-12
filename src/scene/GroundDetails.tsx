@@ -184,39 +184,20 @@ function FarmUtilityVehicle() {
 }
 
 function FieldWorker() {
-  return (
-    <group position={[61, 0.48, -27]} rotation={[0, -0.65, 0]}>
-      <mesh position-y={1.12} castShadow>
-        <capsuleGeometry args={[0.2, 0.68, 6, 10]} />
-        <meshStandardMaterial color="#405c50" roughness={0.92} />
-      </mesh>
-      <mesh position-y={1.72} castShadow>
-        <sphereGeometry args={[0.18, 14, 10]} />
-        <meshStandardMaterial color="#9a765b" roughness={0.88} />
-      </mesh>
-      <mesh position-y={1.89} castShadow>
-        <cylinderGeometry args={[0.32, 0.22, 0.08, 18]} />
-        <meshStandardMaterial color="#7b7044" roughness={0.94} />
-      </mesh>
-      {[-0.11, 0.11].map((x) => (
-        <mesh key={x} position={[x, 0.43, 0]} castShadow>
-          <capsuleGeometry args={[0.075, 0.62, 4, 8]} />
-          <meshStandardMaterial color="#313933" roughness={0.94} />
-        </mesh>
-      ))}
-      {/* Arms (fv-66y.7): the main anatomy tell that broke the silhouette.
-          Shoulders at the body top, a slight forward reach for an inspection
-          stoop, shirt colour matched to the torso. Thin capsule = lower arm. */}
-      {[-1, 1].map((side) => (
-        <group key={`arm-${side}`} position={[side * 0.27, 1.5, 0]} rotation={[0.32, 0, side * 0.14]}>
-          <mesh position-y={-0.3} castShadow>
-            <capsuleGeometry args={[0.06, 0.54, 4, 8]} />
-            <meshStandardMaterial color="#405c50" roughness={0.92} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
+  const { scene } = useGLTF("/assets/models/fieldvision-field-worker.glb");
+  const model = useMemo(() => {
+    const cloned = scene.clone(true);
+    cloned.traverse((obj) => {
+      const mesh = obj as Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+    return cloned;
+  }, [scene]);
+
+  return <primitive object={model} position={[61, 0.48, -27]} rotation={[0, -0.65, 0]} />;
 }
 
 function HeroIrrigationInlet() {
@@ -290,3 +271,4 @@ export function GroundDetails() {
 // fv-66y.17: 与其他 hero GLB 一致，模块作用域预加载——把 fetch 推到首屏并行队列，
 // 否则只在 GroundDetails mount 时才发起，造成首屏 load 瀑布。
 useGLTF.preload("/assets/models/fieldvision-utility-vehicle.glb");
+useGLTF.preload("/assets/models/fieldvision-field-worker.glb");

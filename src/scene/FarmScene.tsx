@@ -1,5 +1,4 @@
-import { EffectComposer, Bloom, DepthOfField, Vignette, SMAA, ToneMapping } from "@react-three/postprocessing";
-import { ToneMappingMode } from "postprocessing";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useFarmStore } from "../state/useFarmStore";
 import { Atmosphere } from "./Atmosphere";
 import { CameraDirector } from "./CameraDirector";
@@ -16,28 +15,27 @@ import { GroundDetails } from "./GroundDetails";
 import { HeroAssets } from "./HeroAssets";
 import { WorldLod } from "./WorldLod";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
-import { visualConfig } from "../config/visual";
 import { PerfProbe } from "./PerfInstrumentation";
 import { perfEnabled } from "./perfStats";
 
-/** Cinematic shallow focus for the close-up beats; wide shots stay fully sharp. */
-function dofPreset(viewMode: string, demoStep: string) {
-  if (viewMode === "field-ground" || demoStep === "inspect-risk") return { focus: 62, range: 95 };
-  if (demoStep === "drone-scan") return { focus: 76, range: 110 };
-  // fv-66y.21: 灌溉高潮与恢复验证给浅景深——之前这两拍反而全焦，是最不重要的
-  // inspect 倒有 DOF。灌溉时相机停在 inlet [66,52,-20]→[23,4,-66]，到水/作物是焦点。
-  if (demoStep === "irrigation") return { focus: 48, range: 80 };
-  if (demoStep === "recovered") return { focus: 70, range: 100 };
-  return null;
-}
+const ScenePostProcessing = lazy(() =>
+  import("./ScenePostProcessing").then(({ ScenePostProcessing: component }) => ({ default: component })),
+);
 
 export function FarmScene() {
   const tier = usePerformanceTier();
   const applyDemoState = useFarmStore((state) => state.applyDemoState);
-  const viewMode = useFarmStore((state) => state.viewMode);
-  const demoStep = useFarmStore((state) => state.demoStep);
-  const dof = dofPreset(viewMode, demoStep);
   const perf = perfEnabled();
+  const [postProcessingReady, setPostProcessingReady] = useState(false);
+
+  useEffect(() => {
+    if (tier === "low") return;
+    // Effects run after paint; one additional animation frame gives the entry
+    // scene ownership of first paint before requesting the heavy optical chunk.
+    const frame = window.requestAnimationFrame(() => setPostProcessingReady(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [tier]);
+
   return (
     <>
       <Atmosphere />
@@ -57,30 +55,11 @@ export function FarmScene() {
       </group>
       <CameraDirector />
       {perf && <PerfProbe />}
-      {tier !== "low" && (
-        // DepthOfField is mounted/unmounted per beat. Multisampled composer
-        // targets cannot safely blit that swapping depth/stencil attachment in
-        // Chrome/WebGL (GL_INVALID_OPERATION), so multisampling stays 0. SMAA
-        // below restores edge AA without needing an MSAA target — Canvas
-        // antialias:true does NOT reach the composer's intermediate target, so
-        // without SMAA every leaf/wire/ridgeline edge would alias.
-        <EffectComposer multisampling={0} enableNormalPass={false}>
-          {[
-            ...(dof
-              ? [<DepthOfField key="dof" worldFocusDistance={dof.focus} worldFocusRange={dof.range} focalLength={0.026} bokehScale={1.55} />]
-              : []),
-            <Bloom key="bloom" intensity={visualConfig.bloomIntensity} luminanceThreshold={visualConfig.bloomThreshold} mipmapBlur />,
-            // This pass owns ACES on med/high. The EffectComposer forces
-            // renderer.toneMapping = NoToneMapping for its lifetime (restoring
-            // the ACESFilmic baseline from FarmCanvas on unmount, for low tier),
-            // so the scene renders linear into the composer and ACES is applied
-            // exactly once here. Full contract documented in FarmCanvas.tsx.
-            <ToneMapping key="tone" mode={ToneMappingMode.ACES_FILMIC} />,
-            <SMAA key="smaa" />,
-            <Vignette key="vignette" eskil={false} offset={0.32} darkness={0.26} />,
-          ]}
-        </EffectComposer>
-      )}
+      {tier !== "low" && postProcessingReady ? (
+        <Suspense fallback={null}>
+          <ScenePostProcessing />
+        </Suspense>
+      ) : null}
     </>
   );
 }

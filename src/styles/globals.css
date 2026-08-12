@@ -29,7 +29,7 @@ button { color: inherit; }
 
 .farm-canvas { position: absolute !important; inset: 0; }
 .grain { position: absolute; inset: 0; pointer-events: none; opacity: .12; mix-blend-mode: soft-light; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E"); }
-.top-bar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 25px 30px; pointer-events: none; background: linear-gradient(180deg, rgba(3,10,7,.66), transparent); }
+.top-bar { position: absolute; z-index: 45; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 25px 30px; pointer-events: none; background: linear-gradient(180deg, rgba(3,10,7,.66), transparent); }
 .top-bar button, .top-bar .top-status { pointer-events: auto; }
 .brand-lockup { display: flex; flex: 0 0 auto; align-items: center; gap: 12px; min-width: 220px; }
 .brand-mark { display: grid; place-items: center; width: 43px; height: 43px; border: 1px solid rgba(224,236,228,.32); border-radius: 50%; color: #eef6f0; font-family: "Newsreader Variable", Georgia, serif; font-size: .72rem; letter-spacing: .06em; backdrop-filter: blur(14px); background: rgba(8,24,17,.32); }
@@ -42,13 +42,13 @@ button { color: inherit; }
 .icon-action { display: grid; place-items: center; width: 35px; height: 35px; padding: 0; border: 1px solid rgba(221,233,226,.16); border-radius: 50%; background: rgba(5,17,12,.38); backdrop-filter: blur(14px); cursor: pointer; }
 .icon-action:hover { background: rgba(77,124,89,.44); }
 
-.layer-switcher { position: absolute; left: 28px; top: 50%; display: grid; gap: 7px; padding: 10px; transform: translateY(-50%); border: 1px solid rgba(224,235,228,.13); border-radius: 18px; backdrop-filter: blur(20px) saturate(125%); background: rgba(6,19,13,.48); box-shadow: 0 18px 50px rgba(0,0,0,.18); }
+.layer-switcher { position: absolute; z-index: 45; left: 28px; top: 50%; display: grid; gap: 7px; padding: 10px; transform: translateY(-50%); border: 1px solid rgba(224,235,228,.13); border-radius: 18px; backdrop-filter: blur(20px) saturate(125%); background: rgba(6,19,13,.48); box-shadow: 0 18px 50px rgba(0,0,0,.18); }
 .layer-switcher small { padding: 4px 7px 7px; color: rgba(226,238,230,.46); font-size: .56rem; letter-spacing: .14em; }
 .layer-switcher button { display: flex; align-items: center; gap: 9px; width: 74px; padding: 9px 10px; border: 0; border-radius: 11px; color: rgba(232,241,235,.63); background: transparent; font-size: .7rem; cursor: pointer; transition: 180ms ease; }
 .layer-switcher button:hover { color: #fff; background: rgba(224,238,228,.08); }
 .layer-switcher button.is-active { color: #eaf6ed; background: rgba(100,169,113,.24); box-shadow: inset 0 0 0 1px rgba(133,202,146,.22); }
 
-.field-panel { position: absolute; top: 96px; right: 28px; width: min(330px, calc(100vw - 56px)); padding: 20px; overflow: hidden; border: 1px solid rgba(225,237,229,.16); border-radius: 22px; color: #edf5ef; backdrop-filter: blur(26px) saturate(125%); background: linear-gradient(145deg, rgba(7,23,16,.78), rgba(5,16,11,.56)); box-shadow: 0 28px 80px rgba(0,0,0,.28); animation: panel-in 380ms cubic-bezier(.2,.8,.2,1) both; }
+.field-panel { position: absolute; z-index: 45; top: 96px; right: 28px; width: min(330px, calc(100vw - 56px)); padding: 20px; overflow: hidden; border: 1px solid rgba(225,237,229,.16); border-radius: 22px; color: #edf5ef; backdrop-filter: blur(26px) saturate(125%); background: linear-gradient(145deg, rgba(7,23,16,.78), rgba(5,16,11,.56)); box-shadow: 0 28px 80px rgba(0,0,0,.28); animation: panel-in 380ms cubic-bezier(.2,.8,.2,1) both; }
 .field-panel::before { content: ""; position: absolute; top: 0; left: 28px; width: 62px; height: 1px; background: var(--water); box-shadow: 0 0 14px var(--water); }
 .panel-kicker { display: flex; align-items: center; justify-content: space-between; color: rgba(226,237,230,.5); font-size: .62rem; letter-spacing: .12em; }
 .field-state { padding: 5px 8px; border-radius: 99px; color: #efd0b0; background: rgba(217,117,53,.15); font-style: normal; letter-spacing: .03em; }
@@ -79,7 +79,7 @@ button { color: inherit; }
 .primary-action { width: 100%; margin-top: 8px; border-color: rgba(99,199,194,.35); color: #dffaf3; background: linear-gradient(90deg, rgba(47,132,113,.54), rgba(38,109,97,.32)); box-shadow: inset 0 0 20px rgba(86,204,186,.06); }
 .primary-action svg:last-child { margin-left: auto; }.primary-action:disabled { cursor: progress; opacity: .72; }
 
-.demo-timeline { position: absolute; right: 28px; bottom: 24px; left: 28px; display: grid; grid-template-columns: auto minmax(420px, 720px); align-items: center; justify-content: space-between; gap: 30px; pointer-events: none; }
+.demo-timeline { position: absolute; z-index: 45; right: 28px; bottom: 24px; left: 28px; display: grid; grid-template-columns: auto minmax(420px, 720px); align-items: center; justify-content: space-between; gap: 30px; pointer-events: none; }
 .demo-timeline button { pointer-events: auto; }
 .play-demo { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 15px; border: 1px solid rgba(222,237,226,.18); border-radius: 99px; background: rgba(6,20,14,.6); backdrop-filter: blur(16px); font-size: .66rem; cursor: pointer; }.play-demo:disabled { opacity: .55; }
 .timeline-track { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); padding-top: 13px; }
@@ -110,6 +110,11 @@ button { color: inherit; }
 
 /* 多源证据点钉卡片（fv-o6c.11）：来源=颜色=图标，绝不合并。 */
 .evidence-chip { min-width: 118px; padding: 7px 10px; border-radius: 10px; color: #f4f1ea; background: rgba(16,20,18,.9); backdrop-filter: blur(10px); box-shadow: 0 6px 18px rgba(0,0,0,.45); pointer-events: none; font: 500 11px/1.35 ui-sans-serif,system-ui; }
+.evidence-chip--compact { min-width: 104px; padding: 6px 8px; font-size: 9px; }
+.evidence-chip--compact .evidence-chip__head strong,
+.evidence-chip--compact .evidence-line { font-size: 9px; }
+.evidence-chip--compact .evidence-dot { width: 7px; height: 7px; }
+.evidence-chip--compact .evidence-day { font-size: 8px; padding: 2px 5px; }
 .evidence-chip--hero { min-width: 168px; }
 .evidence-chip--ref { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; }
 .evidence-chip__head { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }

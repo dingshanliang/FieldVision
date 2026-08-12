@@ -12,6 +12,7 @@ import { TimeCutCard } from "../ui/TimeCutCard";
 import { TopBar } from "../ui/TopBar";
 import { useDemoSequence } from "../hooks/useDemoSequence";
 import { useFarmStore } from "../state/useFarmStore";
+import { shouldAutoReplay } from "./autoReplay";
 
 function AutoDemo() {
   const introComplete = useFarmStore((state) => state.introComplete);
@@ -22,8 +23,41 @@ function AutoDemo() {
     // QA harness: ?qa=1 disables autoplay so screenshot scripts can drive state directly.
     if (new URLSearchParams(window.location.search).has("qa")) return;
     started.current = true;
-    const timer = window.setTimeout(() => void play(), 1200);
-    return () => window.clearTimeout(timer);
+    let completedAt: number | null = null;
+    let lastActivityAt = performance.now();
+    let wasPlaying = useFarmStore.getState().demoPlaying;
+    const markActivity = () => { lastActivityAt = performance.now(); };
+    const activityEvents: (keyof WindowEventMap)[] = ["pointerdown", "pointermove", "touchstart", "wheel", "keydown"];
+    activityEvents.forEach((event) => window.addEventListener(event, markActivity, { passive: true }));
+
+    // Observe every run, including manual playback and presenter stop/reset.
+    // A true→false transition starts a fresh idle window; a new run clears it.
+    const unsubscribe = useFarmStore.subscribe((state) => {
+      if (wasPlaying && !state.demoPlaying) completedAt = performance.now();
+      if (!wasPlaying && state.demoPlaying) completedAt = null;
+      wasPlaying = state.demoPlaying;
+    });
+    const initialTimer = window.setTimeout(() => void play(), 1200);
+    const replayTimer = window.setInterval(() => {
+      const state = useFarmStore.getState();
+      const now = performance.now();
+      if (!shouldAutoReplay({
+        now,
+        completedAt,
+        lastActivityAt,
+        playing: state.demoPlaying,
+        hidden: document.hidden,
+      })) return;
+      completedAt = null;
+      void play();
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(replayTimer);
+      unsubscribe();
+      activityEvents.forEach((event) => window.removeEventListener(event, markActivity));
+    };
   }, [introComplete, play]);
   return null;
 }

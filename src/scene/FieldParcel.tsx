@@ -199,15 +199,27 @@ export function FieldParcel({ field }: FieldParcelProps) {
     if (!isHero) return undefined;
     return (shader: WebGLProgramParametersWithUniforms) => {
       shader.uniforms.uFront = { value: 0 };
+      shader.uniforms.uFvTime = { value: 0 };
       shader.uniforms.uInlet = { value: new Vector2(heroIrrigationInlet.x, heroIrrigationInlet.z) };
       shader.uniforms.uFrontMax = { value: heroIrrigationInlet.frontMax };
       shader.vertexShader = shader.vertexShader
-        .replace("#include <common>", "#include <common>\nvarying vec3 vFvWorld;")
-        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvFvWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+        .replace("#include <common>", `#include <common>
+          uniform float uFront;
+          uniform float uFvTime;
+          varying vec3 vFvWorld;`)
+        .replace("#include <begin_vertex>", `#include <begin_vertex>
+          float fvWaveA = sin(dot(position.xz, vec2(0.72, 0.46)) * 1.35 + uFvTime * 0.72);
+          float fvWaveB = sin(dot(position.xz, vec2(-0.38, 0.92)) * 2.1 - uFvTime * 0.48);
+          float fvWaveMix = 0.35 + uFront * 0.65;
+          transformed.y += (fvWaveA * 0.022 + fvWaveB * 0.012) * fvWaveMix;
+          transformed.x += cos(dot(position.xz, vec2(0.72, 0.46)) * 1.35 + uFvTime * 0.72) * 0.008 * fvWaveMix;
+          transformed.z += cos(dot(position.xz, vec2(-0.38, 0.92)) * 2.1 - uFvTime * 0.48) * 0.006 * fvWaveMix;
+          vFvWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
       shader.fragmentShader = shader.fragmentShader
         .replace("#include <common>", `#include <common>
           varying vec3 vFvWorld;
           uniform float uFront;
+          uniform float uFvTime;
           uniform vec2 uInlet;
           uniform float uFrontMax;`)
         .replace("#include <color_fragment>", `#include <color_fragment>
@@ -215,25 +227,46 @@ export function FieldParcel({ field }: FieldParcelProps) {
             float fvDist = distance(vFvWorld.xz, uInlet);
             float fvFront = uFront * uFrontMax;
             float fvInside = 1.0 - smoothstep(fvFront - 2.0, fvFront + 0.5, fvDist);
-            diffuseColor.rgb = mix(vec3(0.337, 0.329, 0.243), vec3(0.148, 0.224, 0.196), fvInside);
+            diffuseColor.rgb = mix(vec3(0.337, 0.329, 0.243), vec3(0.20, 0.32, 0.29), fvInside);
             float fvBand = smoothstep(fvFront - 9.0, fvFront - 3.0, fvDist)
               * (1.0 - smoothstep(fvFront - 3.0, fvFront - 0.2, fvDist))
               * step(0.01, uFront) * step(uFront, 0.995);
-            diffuseColor.rgb += fvBand * vec3(1.0, 0.84, 0.58) * 0.65;
+            vec3 fvView = normalize(cameraPosition - vFvWorld);
+            vec2 fvD1 = normalize(vec2(0.72, 0.46));
+            vec2 fvD2 = normalize(vec2(-0.38, 0.92));
+            float fvP1 = dot(vFvWorld.xz, fvD1) * 1.35 + uFvTime * 0.72;
+            float fvP2 = dot(vFvWorld.xz, fvD2) * 2.1 - uFvTime * 0.48;
+            vec2 fvSlope = cos(fvP1) * fvD1 * 0.075 + cos(fvP2) * fvD2 * 0.038;
+            vec3 fvNormal = normalize(vec3(-fvSlope.x, 1.0, -fvSlope.y));
+            float fvFresnel = pow(1.0 - clamp(dot(fvView, fvNormal), 0.0, 1.0), 3.0);
+            vec3 fvSun = normalize(vec3(-1.0, 0.38, 0.15));
+            float fvGlint = pow(max(dot(reflect(-fvView, fvNormal), fvSun), 0.0), 76.0);
+            float fvFoamNoise = 0.58 + 0.42 * sin(vFvWorld.x * 1.7 + vFvWorld.z * 1.15 - uFvTime * 1.2);
+            float fvFoam = fvBand * smoothstep(0.35, 0.76, fvFoamNoise);
+            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.39, 0.55, 0.56), fvFresnel * mix(0.08, 0.38, fvInside));
+            diffuseColor.rgb += fvGlint * vec3(1.0, 0.82, 0.58) * fvInside * 0.32;
+            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72, 0.82, 0.75), fvFoam * 0.58);
             diffuseColor.a = mix(0.42, 0.82, fvInside);
           }`);
       waterShader.current = shader;
     };
   }, [isHero]);
 
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     const normal = waterMaterialRef.current?.normalMap;
     if (normal) {
       normal.offset.x += delta * 0.008;
       normal.offset.y += delta * 0.005;
     }
     const shader = waterShader.current;
-    if (shader) shader.uniforms.uFront!.value = evidence.wettingProgress;
+    if (shader) {
+      shader.uniforms.uFront!.value = evidence.wettingProgress;
+      shader.uniforms.uFvTime!.value = clock.elapsedTime;
+    }
+    if (waterMaterialRef.current && isHero) {
+      waterMaterialRef.current.roughness = 0.46 - evidence.wettingProgress * 0.14;
+      waterMaterialRef.current.clearcoat = 0.18 + evidence.wettingProgress * 0.2;
+    }
   });
 
   return (

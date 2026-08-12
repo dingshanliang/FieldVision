@@ -70,8 +70,8 @@ export function DemoPrecheck() {
       aria-live="polite"
       style={{
         position: "fixed",
-        left: 12,
-        top: 12,
+        left: 30,
+        top: 78,
         zIndex: 40,
         display: "flex",
         alignItems: "center",
