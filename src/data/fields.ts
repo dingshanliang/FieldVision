@@ -37,7 +37,7 @@ export const fields: FieldParcel[] = [
     cameraPresets: { aerial: { position: [10,48,75], target: [5,0,24], duration: 2.2 }, ground: { position: [-27,3,33], target: [35,2,28], duration: 2.5 } },
   },
   {
-    id: "B03", name: "东南三号田", cropType: "rapeseed", cropLabel: "油菜", growthStage: "苗期", areaMu: 270,
+    id: "B03", name: "东南三号田", cropType: "soybean", cropLabel: "夏大豆", growthStage: "播种—苗期", areaMu: 270,
     status: "attention", polygon: [[73,-10],[148,-5],[153,70],[72,77],[57,43]], elevation: 1.1,
     moisture: 20, moistureTarget: 25, growthIndex: 0.58, color: "#6e8a39",
     cameraPresets: { aerial: { position: [112,51,89], target: [108,0,31], duration: 2.2 }, ground: { position: [72,3,32], target: [131,2,40], duration: 2.5 } },

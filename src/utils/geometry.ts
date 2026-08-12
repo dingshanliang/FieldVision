@@ -107,4 +107,5 @@ export const cropClumpPresets = {
   corn: { blades: 9, height: 1.85, width: 0.05, lean: 0.3, spread: 0.1, rowSpacing: 0.8, plantSpacing: 0.68 },
   vegetable: { blades: 11, height: 0.26, width: 0.05, lean: 0.2, spread: 0.14, rowSpacing: 0.5, plantSpacing: 0.44 },
   rapeseed: { blades: 8, height: 0.85, width: 0.02, lean: 0.12, spread: 0.09, rowSpacing: 0.55, plantSpacing: 0.52 },
+  soybean: { blades: 6, height: 0.34, width: 0.055, lean: 0.24, spread: 0.12, rowSpacing: 0.58, plantSpacing: 0.42 },
 } as const;

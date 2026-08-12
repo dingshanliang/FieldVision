@@ -51,8 +51,8 @@ function makeCanopyTexture(cropType: FieldParcelType["cropType"]) {
   if (context) {
     context.fillStyle = "#b9baa8";
     context.fillRect(0, 0, 128, 128);
-    const rowGap = cropType === "corn" ? 18 : cropType === "vegetable" ? 10 : 13;
-    const rowWidth = cropType === "corn" ? 5 : cropType === "vegetable" ? 6 : 4;
+    const rowGap = cropType === "corn" ? 18 : cropType === "vegetable" ? 10 : cropType === "soybean" ? 12 : 13;
+    const rowWidth = cropType === "corn" ? 5 : cropType === "vegetable" ? 6 : cropType === "soybean" ? 5 : 4;
     for (let x = -16; x < 144; x += rowGap) {
       const gradient = context.createLinearGradient(x, 0, x + rowWidth, 0);
       gradient.addColorStop(0, "rgba(50, 56, 38, 0.16)");
@@ -182,6 +182,7 @@ export function FieldParcel({ field }: FieldParcelProps) {
     if (field.cropType === "corn") return "#6f8352";
     if (field.cropType === "vegetable") return "#68916a";
     if (field.cropType === "rapeseed") return "#89945a";
+    if (field.cropType === "soybean") return "#668a55";
     return "#778b58";
   }, [field, layerMode, status]);
 

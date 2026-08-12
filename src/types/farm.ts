@@ -20,7 +20,7 @@ export interface RiskZone {
 export interface FieldParcel {
   id: string;
   name: string;
-  cropType: "rice" | "corn" | "vegetable" | "rapeseed";
+  cropType: "rice" | "corn" | "vegetable" | "rapeseed" | "soybean";
   cropLabel: string;
   growthStage: string;
   areaMu: number;

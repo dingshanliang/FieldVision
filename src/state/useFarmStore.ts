@@ -1,7 +1,13 @@
 import { create } from "zustand";
 import type { DemoStep, FieldStatus, LayerMode, ViewMode } from "../types/farm";
+import { advanceTaskProgress as deriveTaskProgress, type AutonomousTaskRecord } from "./autonomousTask";
 import { getDemoStatePreset } from "./irrigationEvent";
 import type { RecoveryPhase } from "./recoveryModel";
+import {
+  getSmartFarmChapterSnapshot,
+  type DailyOperationPlan,
+  type SmartFarmChapter,
+} from "./smartFarmState";
 
 /** 时间跳切卡（D1 根区复测 / D3 冠层复飞 等农业时间锚点）。null = 不显示。 */
 export interface TimeCut {
@@ -21,6 +27,9 @@ interface FarmState {
   demoPlaying: boolean;
   paused: boolean;
   pacing: Pacing;
+  smartFarmChapter: SmartFarmChapter;
+  tasks: Record<string, AutonomousTaskRecord>;
+  dailyOperationPlan: DailyOperationPlan;
   introComplete: boolean;
   irrigationProgress: number;
   scanProgress: number;
@@ -43,6 +52,8 @@ interface FarmState {
   setTimeCut: (cut: TimeCut | null) => void;
   setDroneFollowing: (following: boolean) => void;
   setFieldStatus: (id: string, status: FieldStatus) => void;
+  applySmartFarmChapter: (chapter: SmartFarmChapter) => void;
+  advanceTaskProgress: (taskId: string, progress: number) => void;
   applyDemoState: (step: DemoStep) => void;
   resetDemo: () => void;
 }
@@ -50,6 +61,8 @@ interface FarmState {
 const initialStatuses: Record<string, FieldStatus> = {
   A01: "normal", A02: "risk", A03: "normal", B01: "normal", B02: "processing", B03: "attention", C01: "normal",
 };
+
+const initialSmartFarmSnapshot = getSmartFarmChapterSnapshot("base-online");
 
 export const useFarmStore = create<FarmState>((set) => ({
   selectedFieldId: null,
@@ -60,6 +73,9 @@ export const useFarmStore = create<FarmState>((set) => ({
   demoPlaying: false,
   paused: false,
   pacing: "fast",
+  smartFarmChapter: "base-online",
+  tasks: initialSmartFarmSnapshot.tasks,
+  dailyOperationPlan: initialSmartFarmSnapshot.dailyOperationPlan,
   introComplete: false,
   irrigationProgress: 0,
   scanProgress: 0,
@@ -82,6 +98,32 @@ export const useFarmStore = create<FarmState>((set) => ({
   setTimeCut: (timeCut) => set({ timeCut }),
   setDroneFollowing: (droneFollowing) => set({ droneFollowing }),
   setFieldStatus: (id, status) => set((state) => ({ fieldStatuses: { ...state.fieldStatuses, [id]: status } })),
+  applySmartFarmChapter: (smartFarmChapter) => set((state) => {
+    const snapshot = getSmartFarmChapterSnapshot(smartFarmChapter);
+    return {
+      smartFarmChapter,
+      tasks: snapshot.tasks,
+      dailyOperationPlan: snapshot.dailyOperationPlan,
+      selectedFieldId: snapshot.selectedFieldId,
+      hoveredFieldId: null,
+      introComplete: true,
+      viewMode: snapshot.viewMode,
+      layerMode: snapshot.layerMode,
+      demoStep: snapshot.demoStep,
+      irrigationProgress: snapshot.irrigationProgress,
+      scanProgress: snapshot.scanProgress,
+      recoveryPhase: snapshot.recoveryPhase,
+      timeCut: null,
+      droneFollowing: false,
+      fieldStatuses: { ...state.fieldStatuses, A02: snapshot.fieldStatus },
+    };
+  }),
+  advanceTaskProgress: (taskId, progress) => set((state) => {
+    if (state.paused) return state;
+    const task = state.tasks[taskId];
+    if (!task) return state;
+    return { tasks: { ...state.tasks, [taskId]: deriveTaskProgress(task, progress) } };
+  }),
   applyDemoState: (step) => set((state) => {
     const preset = getDemoStatePreset(step);
     return {
@@ -98,20 +140,26 @@ export const useFarmStore = create<FarmState>((set) => ({
       fieldStatuses: { ...state.fieldStatuses, A02: preset.fieldStatus },
     };
   }),
-  resetDemo: () => set({
-    selectedFieldId: null,
-    hoveredFieldId: null,
-    viewMode: "overview",
-    layerMode: "natural",
-    demoStep: "overview",
-    demoPlaying: false,
-    paused: false,
-    irrigationProgress: 0,
-    scanProgress: 0,
-    recoveryPhase: "none",
-    timeCut: null,
-    droneFollowing: false,
-    fieldStatuses: { ...initialStatuses },
+  resetDemo: () => set(() => {
+    const baseSnapshot = getSmartFarmChapterSnapshot("base-online");
+    return {
+      selectedFieldId: null,
+      hoveredFieldId: null,
+      viewMode: "overview",
+      layerMode: "natural",
+      demoStep: "overview",
+      demoPlaying: false,
+      paused: false,
+      smartFarmChapter: "base-online",
+      tasks: baseSnapshot.tasks,
+      dailyOperationPlan: baseSnapshot.dailyOperationPlan,
+      irrigationProgress: 0,
+      scanProgress: 0,
+      recoveryPhase: "none",
+      timeCut: null,
+      droneFollowing: false,
+      fieldStatuses: { ...initialStatuses },
+    };
   }),
 }));
 

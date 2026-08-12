@@ -16,6 +16,7 @@ const baseColors: Record<FieldParcel["cropType"], string> = {
   corn: "#537a34",
   vegetable: "#4b8444",
   rapeseed: "#839649",
+  soybean: "#527a3f",
 };
 const strawColor = "#b3944a";
 
