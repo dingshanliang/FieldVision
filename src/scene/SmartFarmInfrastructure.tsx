@@ -1,5 +1,7 @@
 import { Html, Line, RoundedBox } from "@react-three/drei";
-import { useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useMemo, useRef } from "react";
+import type { Group } from "three";
 import { BoxGeometry, Color, CylinderGeometry, Matrix4, Quaternion, Vector3 } from "three";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import {
@@ -26,6 +28,24 @@ const POSITION = new Vector3();
 const SCALE = new Vector3(1, 1, 1);
 const ROTATION = new Quaternion();
 
+function DroneDockLid() {
+  const lid = useRef<Group>(null);
+  const chapter = useFarmStore((state) => state.smartFarmChapter);
+  const open = chapter === "coordinated-patrol" || chapter === "a02-alert" || chapter === "outcome-verification" || chapter === "return-overview";
+  useFrame((_, delta) => {
+    if (!lid.current) return;
+    lid.current.rotation.z += ((open ? -0.92 : -0.08) - lid.current.rotation.z) * Math.min(1, delta * 3.5);
+  });
+  return (
+    <group ref={lid} position={[-2.55, 0.55, 0]}>
+      <mesh position={[2.55, 0, 0]} castShadow>
+        <boxGeometry args={[5.3, 0.15, 4.1]} />
+        <meshStandardMaterial color="#4b5753" metalness={0.48} roughness={0.42} />
+      </mesh>
+    </group>
+  );
+}
+
 function SmartOperationsYard() {
   return (
     <group position={YARD_POSITION} rotation={[0, -0.35, 0]}>
@@ -38,10 +58,7 @@ function SmartOperationsYard() {
         <RoundedBox args={[5.8, 0.9, 4.6]} radius={0.28} smoothness={3} castShadow receiveShadow>
           <meshStandardMaterial color="#c8ccc5" metalness={0.35} roughness={0.5} />
         </RoundedBox>
-        <mesh position={[0, 0.55, 0]} rotation={[0, 0, -0.08]} castShadow>
-          <boxGeometry args={[5.3, 0.15, 4.1]} />
-          <meshStandardMaterial color="#4b5753" metalness={0.48} roughness={0.42} />
-        </mesh>
+        <DroneDockLid />
         <mesh position={[2.4, 0.12, 1.7]}>
           <boxGeometry args={[0.18, 0.12, 0.18]} />
           <meshStandardMaterial color="#72d69b" emissive="#3fbd75" emissiveIntensity={1.2} />

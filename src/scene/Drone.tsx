@@ -94,6 +94,7 @@ export function Drone() {
   const group = useRef<Group>(null);
   const scanMesh = useRef<Mesh>(null);
   const demoStep = useFarmStore((state) => state.demoStep);
+  const smartFarmChapter = useFarmStore((state) => state.smartFarmChapter);
   const scanProgress = useFarmStore((state) => state.scanProgress);
   const following = useFarmStore((state) => state.droneFollowing);
   const setFollowing = useFarmStore((state) => state.setDroneFollowing);
@@ -160,10 +161,24 @@ export function Drone() {
     if (!group.current) return;
     const time = clock.elapsedTime;
     const scanning = demoStep === "drone-scan";
+    const docked = smartFarmChapter === "base-online" || smartFarmChapter === "daily-plan" || smartFarmChapter === "autonomous-operations";
+    const returning = smartFarmChapter === "return-overview";
     let yaw: number;
     let pitch: number;
     let roll: number;
-    if (scanning) {
+    if (docked) {
+      scratch.targetPosition.set(-103, 3.35, 111);
+      group.current.position.lerp(scratch.targetPosition, Math.min(1, delta * 2.4));
+      yaw = -0.35;
+      pitch = 0;
+      roll = 0;
+    } else if (returning) {
+      scratch.targetPosition.set(-103, 3.35, 111);
+      group.current.position.lerp(scratch.targetPosition, Math.min(1, delta * 0.58));
+      yaw = Math.atan2(scratch.targetPosition.x - group.current.position.x, scratch.targetPosition.z - group.current.position.z);
+      pitch = 0.05;
+      roll = 0;
+    } else if (scanning) {
       // A real acquisition pass crosses the parcel; direct timeline jumps use
       // scanProgress=1 and settle at the final sampling position.
       scratch.targetPosition.set(
@@ -205,7 +220,7 @@ export function Drone() {
     rotorNames.forEach((name, index) => {
       const rotor = model.getObjectByName(name);
       // GLB is Y-up: the prop spin axis is the local +Y of each rotor mesh.
-      if (rotor) rotor.rotation.y += delta * (index % 2 ? -ROTOR_SPEED : ROTOR_SPEED);
+      if (rotor) rotor.rotation.y += delta * (index % 2 ? -ROTOR_SPEED : ROTOR_SPEED) * (docked ? 0.08 : 1);
     });
     const material = scanMesh.current?.material as ShaderMaterial | undefined;
     const uTime = material?.uniforms.uTime as { value: number } | undefined;

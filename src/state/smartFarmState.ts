@@ -5,6 +5,7 @@ import {
   completeTask,
   confirmTask,
   createPlannedTask,
+  raiseTaskException,
   verifyTaskOutcome,
   type AutonomousTaskRecord,
   type ConfirmationSource,
@@ -164,7 +165,13 @@ function taskStateForChapter(chapter: SmartFarmChapter) {
 
   tasks = authorize(tasks, ["UAV-A02"]);
   tasks = progress(tasks, { "UAV-A02": 0.48 });
-  if (chapter === "coordinated-patrol") return tasks;
+  if (chapter === "coordinated-patrol") {
+    return raiseTaskException(tasks, "PATROL-A03", {
+      code: "OBSTACLE_STOP",
+      message: "前方检测到共享道路临时障碍，设备已停车",
+      at: "2026-06-03T08:24:00+08:00",
+    });
+  }
 
   tasks = verifiedUav(tasks);
   const irrigation = tasks["IRRIGATE-A02"];
