@@ -1,4 +1,4 @@
-import { Html, RoundedBox, useGLTF } from "@react-three/drei";
+import { Html, RoundedBox } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useKtx2 } from "./ktx2Loader";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
@@ -306,19 +306,110 @@ function Warehouse() {
 }
 
 /**
- * A02 东支渠旁的本地提升泵 skid（fv-o6c.9 hero 资产，Blender 自制 GLB）。
- * 加法放置在闸门进水路径旁，灌溉章节镜头经过处可看到近景细节（电机/散热翅片/
- * 控制箱/警示带/锈渍），不替换既有北泵站。资产由 scripts/blender/create_hero_facilities.py 生成。
+ * A02 东支渠旁的本地提升泵 skid（fv-66y.36 程序化重制）。
+ *
+ * 原 fv-o6c.9 的 Blender GLB（fieldvision-pump-station.glb）实测视觉质量远不如
+ * 同场景的 PumpStation：纯色 Principled BSDF vs Concrete032 PBR 贴图；20+ sub-element
+ * 在 scale 3.4x 下读作"建筑群"而非泵；暖橘漆面 + 黄黑警示带与环境对撞。距灌溉相机
+ * 终态 [69,1.8,-22] 仅 ~3 单位，缺陷被特写放大。
+ *
+ * 改为程序化组装，silhouette 明确读作 ~1.5m 高的小型农业灌溉撬装设备（非建筑）：
+ *   混凝土底盘（Concrete032 PBR，同一号泵站）
+ *   + 钢撬装架 4 腿 + 平台（Metal025 PBR）
+ *   + 卧式电机 + 散热翅片 + 风扇罩
+ *   + 联轴器 + 泵蜗壳（青铜色）+ 进/出水管
+ *   + 控制箱 + 状态 LED（灌溉启动时亮绿，与 PumpStation 状态条同步）
+ * 资产退役：删除 GLB 文件 + create_hero_facilities.py 脚本（见 ASSETS.md）。
  */
 function HeroPumpSkid() {
-  const { scene } = useGLTF("/assets/models/fieldvision-pump-station.glb");
+  const [padColor, padNormal, padRoughness] = useMaterialMaps("Concrete032", 0.6);
+  const [steelColor, steelNormal, steelRoughness] = useMaterialMaps("Metal025", 0.4);
+  const progress = useFarmStore((state) => state.irrigationProgress);
+  const event = deriveIrrigationEvent(progress);
+  const active = event.pumpProgress > 0;
+  const ledRef = useRef<MeshStandardMaterial>(null);
+  useFrame(() => {
+    const mat = ledRef.current;
+    if (!mat) return;
+    const p = event.pumpProgress;
+    if (p <= 0) { mat.emissiveIntensity = 0; return; }
+    const ease = p * p * (3 - 2 * p);
+    mat.emissiveIntensity = ease * 3.2;
+  });
+  const MOTOR_Y = 0.95;
   return (
-    <group position={[66.5, 0.7, -23]} rotation={[0, -0.6, 0]} scale={3.4}>
-      <primitive object={scene} />
+    <group position={[66.5, 0.7, -23]} rotation={[0, -0.6, 0]}>
+      {/* 混凝土底盘 */}
+      <mesh position-y={0.15} receiveShadow castShadow>
+        <boxGeometry args={[2.4, 0.3, 1.6]} />
+        <meshStandardMaterial color="#7d7a6e" map={padColor} normalMap={padNormal} roughnessMap={padRoughness} roughness={0.92} />
+      </mesh>
+      {/* 钢撬装架：4 腿 + 平台 */}
+      {[-1.0, 1.0].flatMap((x) => [-0.6, 0.6].map((z) => (
+        <mesh key={`leg-${x}-${z}`} position={[x, 0.55, z]} castShadow>
+          <boxGeometry args={[0.09, 0.5, 0.09]} />
+          <meshStandardMaterial color="#4a5051" map={steelColor} normalMap={steelNormal} roughnessMap={steelRoughness} roughness={0.5} metalness={0.72} envMapIntensity={0.55} />
+        </mesh>
+      )))}
+      <mesh position={[0, 0.82, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.1, 0.06, 1.25]} />
+        <meshStandardMaterial color="#4a5051" map={steelColor} normalMap={steelNormal} roughnessMap={steelRoughness} roughness={0.5} metalness={0.72} envMapIntensity={0.55} />
+      </mesh>
+      {/* 电机（卧式圆柱）+ 散热翅片 + 风扇罩 */}
+      <group position={[-0.45, MOTOR_Y, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.22, 0.22, 0.7, 24]} />
+          <meshStandardMaterial color="#384654" roughness={0.42} metalness={0.5} envMapIntensity={0.6} />
+        </mesh>
+        {[-0.25, -0.1, 0.05, 0.2].map((x) => (
+          <mesh key={x} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.225, 0.225, 0.025, 24]} />
+            <meshStandardMaterial color="#2c3845" roughness={0.5} metalness={0.5} />
+          </mesh>
+        ))}
+        <mesh position={[-0.4, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.24, 0.22, 0.06, 24]} />
+          <meshStandardMaterial color="#25303a" roughness={0.6} metalness={0.45} />
+        </mesh>
+      </group>
+      {/* 联轴器 */}
+      <mesh position={[0.05, MOTOR_Y, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.1, 0.1, 0.1, 16]} />
+        <meshStandardMaterial color="#5a6062" roughness={0.4} metalness={0.7} />
+      </mesh>
+      {/* 泵蜗壳（青铜色短圆柱 + 端盖） */}
+      <mesh position={[0.25, MOTOR_Y, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.26, 0.26, 0.28, 28]} />
+        <meshStandardMaterial color="#6c5b48" roughness={0.45} metalness={0.55} envMapIntensity={0.5} />
+      </mesh>
+      <mesh position={[0.4, MOTOR_Y, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.04, 20]} />
+        <meshStandardMaterial color="#4d4030" roughness={0.5} metalness={0.6} />
+      </mesh>
+      {/* 出水立管（向上接田面方向） */}
+      <mesh position={[0.25, MOTOR_Y + 0.35, 0]} castShadow>
+        <cylinderGeometry args={[0.07, 0.07, 0.5, 14]} />
+        <meshStandardMaterial color="#5e6868" roughness={0.45} metalness={0.6} />
+      </mesh>
+      {/* 进水管（从渠道侧水平接入） */}
+      <mesh position={[0.5, MOTOR_Y - 0.05, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.08, 0.08, 0.35, 14]} />
+        <meshStandardMaterial color="#5e6868" roughness={0.45} metalness={0.6} />
+      </mesh>
+      {/* 控制箱 + 状态 LED（灌溉启动时亮绿） */}
+      <group position={[0.95, 0.95, -0.45]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.28, 0.45, 0.18]} />
+          <meshStandardMaterial color="#3a3e3c" roughness={0.6} metalness={0.3} envMapIntensity={0.4} />
+        </mesh>
+        <mesh position={[0.105, 0.12, 0.11]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.025, 0.025, 0.03, 12]} />
+          <meshStandardMaterial ref={ledRef} color={active ? "#7ff0a5" : "#3a4540"} emissive={active ? "#3fdf7c" : "#000000"} emissiveIntensity={0} />
+        </mesh>
+      </group>
     </group>
   );
 }
-useGLTF.preload("/assets/models/fieldvision-pump-station.glb");
 
 export function Facilities() {
   return (
