@@ -177,9 +177,9 @@ export function Drone() {
       group.current.position.lerp(scratch.targetPosition, Math.min(1, delta * 1.8));
     } else {
       const t = pathT.current;
-      const point = curve.getPointAt(t);
-      const ahead = curve.getPointAt((t + 0.012) % 1);
-      const further = curve.getPointAt((t + 0.035) % 1);
+      const point = curve.getPointAt(t, scratch.targetPosition);
+      const ahead = curve.getPointAt((t + 0.012) % 1, scratch.ahead);
+      const further = curve.getPointAt((t + 0.035) % 1, scratch.further);
       group.current.position.copy(point);
       // Heading now vs. slightly ahead → bank (roll) into the turn.
       const headingNow = Math.atan2(ahead.x - point.x, ahead.z - point.z);

@@ -8,6 +8,9 @@ import { useFarmStore } from "../state/useFarmStore";
 import { droneWorldPosition } from "./dronePosition";
 
 const overview = { position: [210, 86, 223] as const, target: [-8, 2, -18] as const };
+// The URL cannot change without a navigation; parse the QA escape hatch once,
+// not on every rendered frame.
+const QA_MODE = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("qa");
 
 export function CameraDirector() {
   const controls = useRef<CameraControlsImpl>(null);
@@ -187,7 +190,7 @@ export function CameraDirector() {
     if (!current) return;
     if (!useFarmStore.getState().introComplete) return;
     // QA screenshot scripts drive the camera directly — never fight them.
-    if (new URLSearchParams(window.location.search).has("qa")) return;
+    if (QA_MODE) return;
     // Drone-scan follow shot: ride behind/above the drone and look at it,
     // instead of the scripted breathing drift. The drone publishes its live
     // world position every frame (see Drone.tsx), so we just poll it here.

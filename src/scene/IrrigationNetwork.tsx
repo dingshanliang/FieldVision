@@ -237,6 +237,7 @@ function FlowParticles({ path, flowProgress, pulseProgress, count = 42, size = 0
   const phaseRef = useRef(0);
   const previousArrivalRef = useRef(0);
   const arrivalPulseRef = useRef(0);
+  const pointScratch = useRef(new Vector3());
   useFrame((_, delta) => {
     const material = materialRef.current;
     if (previousArrivalRef.current < 0.6 && pulseProgress >= 0.6) arrivalPulseRef.current = 1;
@@ -256,7 +257,7 @@ function FlowParticles({ path, flowProgress, pulseProgress, count = 42, size = 0
     const reveal = Math.min(1, flowProgress * 1.18);
     for (let index = 0; index < count; index += 1) {
       const normalized = (index / count + phaseRef.current) % 1;
-      const point = path.getPointAt(normalized * reveal);
+      const point = path.getPointAt(normalized * reveal, pointScratch.current);
       positions.setXYZ(index, point.x, point.y + lift, point.z);
     }
     positions.needsUpdate = true;
