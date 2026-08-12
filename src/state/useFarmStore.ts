@@ -3,6 +3,7 @@ import type { DemoStep, FieldStatus, LayerMode, ViewMode } from "../types/farm";
 import {
   advanceTaskProgress as deriveTaskProgress,
   confirmTask,
+  isConfirmationValid,
   type AutonomousTaskRecord,
   type ConfirmationSource,
 } from "./autonomousTask";
@@ -113,9 +114,22 @@ export const useFarmStore = create<FarmState>((set) => ({
   setFieldStatus: (id, status) => set((state) => ({ fieldStatuses: { ...state.fieldStatuses, [id]: status } })),
   applySmartFarmChapter: (smartFarmChapter) => set((state) => {
     const snapshot = getSmartFarmChapterSnapshot(smartFarmChapter);
+    const previousWaterTask = state.tasks["IRRIGATE-A02"];
+    const snapshotWaterTask = snapshot.tasks["IRRIGATE-A02"];
+    const tasks = previousWaterTask && snapshotWaterTask
+      && isConfirmationValid(previousWaterTask)
+      && ["authorized", "running", "completed", "verified"].includes(snapshotWaterTask.status)
+      ? {
+          ...snapshot.tasks,
+          "IRRIGATE-A02": {
+            ...snapshotWaterTask,
+            confirmationReceipt: previousWaterTask.confirmationReceipt,
+          },
+        }
+      : snapshot.tasks;
     return {
       smartFarmChapter,
-      tasks: snapshot.tasks,
+      tasks,
       dailyOperationPlan: snapshot.dailyOperationPlan,
       confirmationCountdown: null,
       confirmationCue: "idle",

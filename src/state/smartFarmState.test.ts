@@ -52,6 +52,15 @@ describe("smart farm canonical chapter snapshots", () => {
     expect(presenterTask?.confirmationReceipt?.source).toBe("presenter");
   });
 
+  it("preserves the confirmation source into hydraulic execution", () => {
+    useFarmStore.getState().applySmartFarmChapter("remote-decision");
+    useFarmStore.getState().confirmTaskForDemo("IRRIGATE-A02", "presenter");
+    useFarmStore.getState().applySmartFarmChapter("irrigation-response");
+
+    expect(useFarmStore.getState().tasks["IRRIGATE-A02"]?.confirmationReceipt?.source).toBe("presenter");
+    expect(useFarmStore.getState().tasks["IRRIGATE-A02"]?.status).toBe("running");
+  });
+
   it("does not treat water arrival as a verified outcome", () => {
     const executing = getSmartFarmChapterSnapshot("irrigation-response");
     expect(executing.tasks["IRRIGATE-A02"]).toMatchObject({ status: "running", verifiedOutcome: null });

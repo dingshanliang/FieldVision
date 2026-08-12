@@ -19,6 +19,7 @@ import {
 import type { WebGLProgramParametersWithUniforms } from "three";
 import { useKtx2 } from "./ktx2Loader";
 import { useFarmStore } from "../state/useFarmStore";
+import { deriveA02Response } from "../state/a02ResponseModel";
 import { deriveIrrigationEvent } from "../state/irrigationEvent";
 import { seededRandom } from "../utils/geometry";
 
@@ -357,7 +358,10 @@ function WaterMist({ name, position, strength, count = 26, spread = 1 }: { name:
 }
 
 export function IrrigationNetwork() {
-  const progress = useFarmStore((state) => state.irrigationProgress);
+  const requestedProgress = useFarmStore((state) => state.irrigationProgress);
+  const task = useFarmStore((state) => state.tasks["IRRIGATE-A02"]);
+  const recoveryPhase = useFarmStore((state) => state.recoveryPhase);
+  const progress = task ? deriveA02Response(task, requestedProgress, recoveryPhase).effectiveProgress : 0;
   const event = deriveIrrigationEvent(progress);
   const mainBank = useMemo(() => createEdgeBands(curve, 12.4, 8.4, 0.05), []);
   const mainLining = useMemo(() => createEdgeBands(curve, 8.4, 5.7, 0.07), []);

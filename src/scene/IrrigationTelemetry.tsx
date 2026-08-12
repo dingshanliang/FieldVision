@@ -1,5 +1,6 @@
 import { Html } from "@react-three/drei";
 import { deriveIrrigationEvent } from "../state/irrigationEvent";
+import { deriveA02Response } from "../state/a02ResponseModel";
 import { useFarmStore } from "../state/useFarmStore";
 
 interface Receipt {
@@ -11,7 +12,10 @@ interface Receipt {
 }
 
 export function IrrigationTelemetry() {
-  const progress = useFarmStore((state) => state.irrigationProgress);
+  const requestedProgress = useFarmStore((state) => state.irrigationProgress);
+  const task = useFarmStore((state) => state.tasks["IRRIGATE-A02"]);
+  const recoveryPhase = useFarmStore((state) => state.recoveryPhase);
+  const progress = task ? deriveA02Response(task, requestedProgress, recoveryPhase).effectiveProgress : 0;
   const demoStep = useFarmStore((state) => state.demoStep);
   const event = deriveIrrigationEvent(progress);
   if (demoStep !== "irrigation" && demoStep !== "recovered") return null;

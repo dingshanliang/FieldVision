@@ -72,6 +72,30 @@ export function useDemoSequence() {
           }
         }
 
+        if (chapter.id === "irrigation-response") {
+          const slices = 6;
+          for (let index = 1; index <= slices; index += 1) {
+            await wait(chapter.durationMs / slices, controller.signal);
+            elapsed += chapter.durationMs / slices;
+            const progress = 0.62 + (1 - 0.62) * (index / slices);
+            store.getState().setIrrigationProgress(progress);
+            store.getState().advanceTaskProgress("IRRIGATE-A02", progress);
+          }
+          store.getState().setRecoveryPhase("arrived");
+          store.getState().setFieldStatus("A02", "processing");
+        }
+
+        if (chapter.id === "outcome-verification") {
+          store.getState().setRecoveryPhase("arrived");
+          store.getState().setFieldStatus("A02", "processing");
+          for (const phase of ["d1-root", "d3-reflight", "resolved"] as const) {
+            await wait(chapter.durationMs / 3, controller.signal);
+            elapsed += chapter.durationMs / 3;
+            store.getState().setRecoveryPhase(phase);
+          }
+          store.getState().setFieldStatus("A02", "recovered");
+        }
+
         await wait(Math.max(0, chapter.durationMs - elapsed), controller.signal);
       }
       if (activeController === controller) {
