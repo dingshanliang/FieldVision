@@ -17,7 +17,11 @@ function task(id: string, dependencies: string[] = []) {
     kind: "inspection",
     targetId: `FIELD-${id}`,
     equipmentId: `ROBOT-${id}`,
+    equipmentLabel: `巡检机器人 ${id}`,
     routeId: `ROUTE-${id}`,
+    objective: `${id} 任务目标`,
+    expectedDurationMinutes: 30,
+    safetyBoundaryLabel: `${id} 批准作业区`,
     parametersVersion: 1,
     safetyBoundaryVersion: 1,
     dependencies,
@@ -40,7 +44,7 @@ describe("Autonomous Operation Task", () => {
     expect(confirmed.status).toBe("authorized");
 
     const changed = invalidateConfirmation(confirmed, {
-      routeId: "ROUTE-A-REVISED",
+      objective: "A 调整后的任务目标",
       reason: "障碍导致路线边界变化",
       at: "2026-06-03T08:12:00+08:00",
     });
@@ -52,6 +56,7 @@ describe("Autonomous Operation Task", () => {
       invalidationReason: "障碍导致路线边界变化",
     });
     expect(isConfirmationValid(changed)).toBe(false);
+    expect(changed.plan.objective).toBe("A 调整后的任务目标");
   });
 
   it("propagates an exception only through declared operational dependencies", () => {

@@ -28,9 +28,28 @@ describe("smart farm canonical chapter snapshots", () => {
 
     const decision = getSmartFarmChapterSnapshot("remote-decision");
     expect(decision.tasks["IRRIGATE-A02"]).toMatchObject({
-      status: "authorized",
-      confirmationReceipt: { source: "demo-preset" },
+      status: "awaiting-confirmation",
+      confirmationReceipt: null,
     });
+  });
+
+  it("uses one confirmation action for autoplay and presenter input", () => {
+    useFarmStore.getState().applySmartFarmChapter("remote-decision");
+    useFarmStore.getState().confirmTaskForDemo("IRRIGATE-A02", "simulated-autoplay");
+    const autoplayTask = useFarmStore.getState().tasks["IRRIGATE-A02"];
+
+    useFarmStore.getState().applySmartFarmChapter("remote-decision");
+    useFarmStore.getState().confirmTaskForDemo("IRRIGATE-A02", "presenter");
+    const presenterTask = useFarmStore.getState().tasks["IRRIGATE-A02"];
+
+    expect(autoplayTask).toBeDefined();
+    expect(presenterTask).toBeDefined();
+    expect({ ...autoplayTask, confirmationReceipt: { ...autoplayTask?.confirmationReceipt, source: null } }).toEqual({
+      ...presenterTask,
+      confirmationReceipt: { ...presenterTask?.confirmationReceipt, source: null },
+    });
+    expect(autoplayTask?.confirmationReceipt?.source).toBe("simulated-autoplay");
+    expect(presenterTask?.confirmationReceipt?.source).toBe("presenter");
   });
 
   it("does not treat water arrival as a verified outcome", () => {

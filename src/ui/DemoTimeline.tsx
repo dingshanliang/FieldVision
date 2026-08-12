@@ -1,33 +1,23 @@
 import { Pause, Play } from "lucide-react";
 import { useDemoSequence } from "../hooks/useDemoSequence";
+import { SMART_FARM_CHAPTER_META } from "../state/smartFarmDirector";
+import type { SmartFarmChapter } from "../state/smartFarmState";
 import { useFarmStore } from "../state/useFarmStore";
-import type { DemoStep } from "../types/farm";
-
-const steps: Array<{ id: DemoStep; label: string }> = [
-  { id: "overview", label: "基地总览" },
-  { id: "select-field", label: "进入地块" },
-  { id: "inspect-risk", label: "发现异常" },
-  { id: "irrigation", label: "灌溉处置" },
-  { id: "recovered", label: "恢复验证" },
-];
 
 export function DemoTimeline() {
-  const current = useFarmStore((state) => state.demoStep);
+  const current = useFarmStore((state) => state.smartFarmChapter);
   const playing = useFarmStore((state) => state.demoPlaying);
   const paused = useFarmStore((state) => state.paused);
   const pacing = useFarmStore((state) => state.pacing);
   const introComplete = useFarmStore((state) => state.introComplete);
-  const applyDemoState = useFarmStore((state) => state.applyDemoState);
+  const applySmartFarmChapter = useFarmStore((state) => state.applySmartFarmChapter);
   const setPacing = useFarmStore((state) => state.setPacing);
-  const setIntroComplete = useFarmStore((s) => s.setIntroComplete);
-  const setDemoStep = useFarmStore((s) => s.setDemoStep);
+  const setIntroComplete = useFarmStore((state) => state.setIntroComplete);
+  const setDemoStep = useFarmStore((state) => state.setDemoStep);
   const { play, stop, togglePause } = useDemoSequence();
-  const activeIndex = Math.max(0, steps.findIndex((step) => step.id === current || (current === "drone-scan" && step.id === "inspect-risk")));
+  const activeIndex = Math.max(0, SMART_FARM_CHAPTER_META.findIndex((chapter) => chapter.id === current));
+
   if (!introComplete) {
-    // 开场 descent 期间提供跳过控制（规范 docs/CODEX_TASK_3D_FARMLAND_DEMO.md:610
-    // "必须提供跳过开场"）。只翻 introComplete=true —— CameraDirector 的 intro
-    // promise chain 的 isCurrent() 会因此 false 化为 no-op，下一个 effect 会把
-    // 相机飞到 overview，无需直接操控 introGeneration ref。
     const skipIntro = () => {
       setIntroComplete(true);
       setDemoStep("overview");
@@ -41,10 +31,12 @@ export function DemoTimeline() {
       </div>
     );
   }
-  function jumpTo(step: DemoStep) {
+
+  function jumpTo(chapter: SmartFarmChapter) {
     stop();
-    applyDemoState(step);
+    applySmartFarmChapter(chapter);
   }
+
   return (
     <footer className="demo-timeline">
       <div className="demo-controls">
@@ -54,18 +46,18 @@ export function DemoTimeline() {
             {paused ? "继续" : "暂停"}
           </button>
         ) : (
-          <button type="button" className="play-demo" onClick={() => void play()}><Play size={15} fill="currentColor" />播放完整演示</button>
+          <button type="button" className="play-demo" onClick={() => void play()}><Play size={15} fill="currentColor" />播放九章节</button>
         )}
         <div className="pacing-toggle" role="group" aria-label="演示节奏">
-          <button type="button" className={pacing === "fast" ? "is-active" : ""} onClick={() => setPacing("fast")}>快览</button>
-          <button type="button" className={pacing === "narration" ? "is-active" : ""} onClick={() => setPacing("narration")}>讲解</button>
+          <button type="button" className={pacing === "fast" ? "is-active" : ""} onClick={() => setPacing("fast")}>90 秒</button>
+          <button type="button" className={pacing === "narration" ? "is-active" : ""} onClick={() => setPacing("narration")}>150 秒</button>
         </div>
       </div>
       <div className="timeline-track">
-        <span className="timeline-fill" style={{ width: `${(activeIndex / (steps.length - 1)) * 100}%` }} />
-        {steps.map((step, index) => (
-          <button type="button" key={step.id} className={index <= activeIndex ? "is-active" : ""} onClick={() => jumpTo(step.id)}>
-            <i>{String(index + 1).padStart(2, "0")}</i><span>{step.label}</span>
+        <span className="timeline-fill" style={{ width: `${(activeIndex / (SMART_FARM_CHAPTER_META.length - 1)) * 100}%` }} />
+        {SMART_FARM_CHAPTER_META.map((chapter, index) => (
+          <button type="button" key={chapter.id} className={index <= activeIndex ? "is-active" : ""} onClick={() => jumpTo(chapter.id)}>
+            <i>{String(index + 1).padStart(2, "0")}</i><span>{chapter.label}</span>
           </button>
         ))}
       </div>

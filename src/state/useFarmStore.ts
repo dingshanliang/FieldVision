@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import type { DemoStep, FieldStatus, LayerMode, ViewMode } from "../types/farm";
-import { advanceTaskProgress as deriveTaskProgress, type AutonomousTaskRecord } from "./autonomousTask";
+import {
+  advanceTaskProgress as deriveTaskProgress,
+  confirmTask,
+  type AutonomousTaskRecord,
+  type ConfirmationSource,
+} from "./autonomousTask";
 import { getDemoStatePreset } from "./irrigationEvent";
 import type { RecoveryPhase } from "./recoveryModel";
 import {
@@ -17,6 +22,8 @@ export interface TimeCut {
 
 /** 演示节奏：fast 快览 / narration 讲解留白（导演系统 fv-o6c.12）。 */
 export type Pacing = "fast" | "narration";
+export type InteractiveConfirmationSource = Exclude<ConfirmationSource, "demo-preset">;
+export type ConfirmationCue = "idle" | "countdown" | "simulated-click" | "presenter-click";
 
 interface FarmState {
   selectedFieldId: string | null;
@@ -30,6 +37,8 @@ interface FarmState {
   smartFarmChapter: SmartFarmChapter;
   tasks: Record<string, AutonomousTaskRecord>;
   dailyOperationPlan: DailyOperationPlan;
+  confirmationCountdown: number | null;
+  confirmationCue: ConfirmationCue;
   introComplete: boolean;
   irrigationProgress: number;
   scanProgress: number;
@@ -53,6 +62,8 @@ interface FarmState {
   setDroneFollowing: (following: boolean) => void;
   setFieldStatus: (id: string, status: FieldStatus) => void;
   applySmartFarmChapter: (chapter: SmartFarmChapter) => void;
+  setConfirmationCountdown: (seconds: number | null) => void;
+  confirmTaskForDemo: (taskId: string, source: InteractiveConfirmationSource) => void;
   advanceTaskProgress: (taskId: string, progress: number) => void;
   applyDemoState: (step: DemoStep) => void;
   resetDemo: () => void;
@@ -76,6 +87,8 @@ export const useFarmStore = create<FarmState>((set) => ({
   smartFarmChapter: "base-online",
   tasks: initialSmartFarmSnapshot.tasks,
   dailyOperationPlan: initialSmartFarmSnapshot.dailyOperationPlan,
+  confirmationCountdown: null,
+  confirmationCue: "idle",
   introComplete: false,
   irrigationProgress: 0,
   scanProgress: 0,
@@ -104,6 +117,8 @@ export const useFarmStore = create<FarmState>((set) => ({
       smartFarmChapter,
       tasks: snapshot.tasks,
       dailyOperationPlan: snapshot.dailyOperationPlan,
+      confirmationCountdown: null,
+      confirmationCue: "idle",
       selectedFieldId: snapshot.selectedFieldId,
       hoveredFieldId: null,
       introComplete: true,
@@ -116,6 +131,22 @@ export const useFarmStore = create<FarmState>((set) => ({
       timeCut: null,
       droneFollowing: false,
       fieldStatuses: { ...state.fieldStatuses, A02: snapshot.fieldStatus },
+    };
+  }),
+  setConfirmationCountdown: (confirmationCountdown) => set({
+    confirmationCountdown,
+    confirmationCue: confirmationCountdown === null ? "idle" : "countdown",
+  }),
+  confirmTaskForDemo: (taskId, source) => set((state) => {
+    const task = state.tasks[taskId];
+    if (!task || task.status !== "awaiting-confirmation") return state;
+    return {
+      tasks: {
+        ...state.tasks,
+        [taskId]: confirmTask(task, source, "2026-06-03T08:35:00+08:00"),
+      },
+      confirmationCountdown: null,
+      confirmationCue: source === "simulated-autoplay" ? "simulated-click" : "presenter-click",
     };
   }),
   advanceTaskProgress: (taskId, progress) => set((state) => {
@@ -153,6 +184,8 @@ export const useFarmStore = create<FarmState>((set) => ({
       smartFarmChapter: "base-online",
       tasks: baseSnapshot.tasks,
       dailyOperationPlan: baseSnapshot.dailyOperationPlan,
+      confirmationCountdown: null,
+      confirmationCue: "idle",
       irrigationProgress: 0,
       scanProgress: 0,
       recoveryPhase: "none",

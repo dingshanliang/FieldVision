@@ -8,6 +8,7 @@ import { DemoTimeline } from "../ui/DemoTimeline";
 import { FieldDetailPanel } from "../ui/FieldDetailPanel";
 import { LayerSwitcher } from "../ui/LayerSwitcher";
 import { PresenterControls } from "../ui/PresenterControls";
+import { RemoteConfirmationCard } from "../ui/RemoteConfirmationCard";
 import { TimeCutCard } from "../ui/TimeCutCard";
 import { TopBar } from "../ui/TopBar";
 import { useDemoSequence } from "../hooks/useDemoSequence";
@@ -69,10 +70,10 @@ function presentMode(): boolean {
 
 export function App() {
   const present = presentMode();
-  const demoStep = useFarmStore((state) => state.demoStep);
+  const chapter = useFarmStore((state) => state.smartFarmChapter);
   // fv-66y.22: 2.39:1 letterbox 仅在无人机扫描与恢复验证两拍启用——那是"作为镜头"的强信号。
   // present 模式也保留（属于电影感画面而非操作层）。
-  const cinematic = demoStep === "drone-scan" || demoStep === "recovered";
+  const cinematic = chapter === "coordinated-patrol" || chapter === "a02-alert" || chapter === "outcome-verification";
   return (
     <main className={`app-shell${present ? " is-present" : ""}`}>
       <FarmCanvas />
@@ -85,6 +86,7 @@ export function App() {
           <FieldDetailPanel />
           <DemoTimeline />
           <PresenterControls />
+          <RemoteConfirmationCard />
           <TimeCutCard />
           <ChapterCaption />
           <DemoPrecheck />

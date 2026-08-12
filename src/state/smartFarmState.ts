@@ -49,7 +49,11 @@ function createBaseTasks(): Record<string, AutonomousTaskRecord> {
       kind: "sowing",
       targetId: "B03",
       equipmentId: "TRACTOR-01",
+      equipmentLabel: "无人拖拉机 · 6 行播种机",
       routeId: "B03-SOWING-STRIPS",
+      objective: "夏大豆缺苗区补播覆盖率 ≥96%",
+      expectedDurationMinutes: 55,
+      safetyBoundaryLabel: "B03 批准补播条带",
       parametersVersion: 1,
       safetyBoundaryVersion: 1,
     }),
@@ -58,7 +62,11 @@ function createBaseTasks(): Record<string, AutonomousTaskRecord> {
       kind: "inspection",
       targetId: "A03-B02-SERVICE-EDGE",
       equipmentId: "ROBOT-01",
+      equipmentLabel: "田间巡检机器人",
       routeId: "CENTRAL-PATROL-ROUTE",
+      objective: "完成 A03/B02 边缘苗情与路况巡检",
+      expectedDurationMinutes: 42,
+      safetyBoundaryLabel: "中央机耕路与批准地块边缘",
       parametersVersion: 1,
       safetyBoundaryVersion: 1,
     }),
@@ -67,7 +75,11 @@ function createBaseTasks(): Record<string, AutonomousTaskRecord> {
       kind: "maintenance",
       targetId: "EAST-MAINTENANCE-BELT",
       equipmentId: "MOWER-01",
+      equipmentLabel: "自主维护设备",
       routeId: "EAST-MAINTENANCE-ROUTE",
+      objective: "清理泵站与渠道维护带杂草",
+      expectedDurationMinutes: 48,
+      safetyBoundaryLabel: "东侧环路与渠道维护带",
       parametersVersion: 1,
       safetyBoundaryVersion: 1,
     }),
@@ -76,7 +88,11 @@ function createBaseTasks(): Record<string, AutonomousTaskRecord> {
       kind: "aerial-survey",
       targetId: "A02",
       equipmentId: "UAV-01",
+      equipmentLabel: "多光谱无人机",
       routeId: "A02-MULTISPECTRAL-ROUTE",
+      objective: "复核 A02 东侧连续低值区",
+      expectedDurationMinutes: 18,
+      safetyBoundaryLabel: "A02 核准航测走廊",
       parametersVersion: 1,
       safetyBoundaryVersion: 1,
     }),
@@ -85,7 +101,11 @@ function createBaseTasks(): Record<string, AutonomousTaskRecord> {
       kind: "irrigation",
       targetId: "A02",
       equipmentId: "PUMP-01+GATE-E",
+      equipmentLabel: "泵站 · 主闸 · 东支闸",
       routeId: "A02-EAST-WATER-CHAIN",
+      objective: "根区含水率 18% → 26%",
+      expectedDurationMinutes: 37,
+      safetyBoundaryLabel: "A02 东侧 23.6 亩",
       parametersVersion: 1,
       safetyBoundaryVersion: 1,
       dependencies: ["UAV-A02"],
@@ -151,9 +171,9 @@ function taskStateForChapter(chapter: SmartFarmChapter) {
   if (irrigation) tasks[irrigation.id] = { ...irrigation, status: "awaiting-confirmation" };
   if (chapter === "a02-alert") return tasks;
 
-  if (tasks["IRRIGATE-A02"]) tasks["IRRIGATE-A02"] = confirmTask(tasks["IRRIGATE-A02"], "demo-preset", "2026-06-03T08:35:00+08:00");
   if (chapter === "remote-decision") return tasks;
 
+  if (tasks["IRRIGATE-A02"]) tasks["IRRIGATE-A02"] = confirmTask(tasks["IRRIGATE-A02"], "demo-preset", "2026-06-03T08:35:00+08:00");
   tasks = progress(tasks, { "IRRIGATE-A02": 0.62 });
   if (chapter === "irrigation-response") return tasks;
 

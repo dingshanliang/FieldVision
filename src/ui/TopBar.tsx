@@ -4,9 +4,10 @@ import { useDemoSequence } from "../hooks/useDemoSequence";
 
 export function TopBar() {
   const playing = useFarmStore((state) => state.demoPlaying);
+  const paused = useFarmStore((state) => state.paused);
   const introComplete = useFarmStore((state) => state.introComplete);
   const reset = useFarmStore((state) => state.resetDemo);
-  const { play, stop } = useDemoSequence();
+  const { play, stop, togglePause } = useDemoSequence();
   function returnToOverview() { stop(); reset(); }
   return (
     <header className="top-bar">
@@ -18,8 +19,8 @@ export function TopBar() {
         <span><CloudSun size={15} /> 23°C · 东南风 2级</span>
         <span><i className="status-dot" /> 12 台设备在线</span>
         {introComplete && (
-          <button className="icon-action" type="button" aria-label={playing ? "暂停演示" : "播放完整演示"} onClick={() => playing ? stop() : void play()}>
-            {playing ? <Pause size={16} /> : <Play size={16} />}
+          <button className="icon-action" type="button" aria-label={playing ? paused ? "继续演示" : "暂停演示" : "播放完整演示"} onClick={() => playing ? togglePause() : void play()}>
+            {playing && !paused ? <Pause size={16} /> : <Play size={16} />}
           </button>
         )}
         <button className="icon-action" type="button" aria-label="返回基地总览" onClick={returnToOverview}><RotateCcw size={16} /></button>

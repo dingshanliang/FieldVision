@@ -13,7 +13,11 @@ export type ConfirmationSource = "simulated-autoplay" | "presenter" | "demo-pres
 export interface AutonomousTaskPlan {
   targetId: string;
   equipmentId: string;
+  equipmentLabel: string;
   routeId: string;
+  objective: string;
+  expectedDurationMinutes: number;
+  safetyBoundaryLabel: string;
   parametersVersion: number;
   safetyBoundaryVersion: number;
 }
@@ -72,6 +76,9 @@ function fingerprint(plan: AutonomousTaskPlan) {
     plan.targetId,
     plan.equipmentId,
     plan.routeId,
+    plan.objective,
+    plan.expectedDurationMinutes,
+    plan.safetyBoundaryLabel,
     plan.parametersVersion,
     plan.safetyBoundaryVersion,
   ].join("|");
@@ -85,7 +92,11 @@ export function createPlannedTask(input: PlannedTaskInput): AutonomousTaskRecord
     plan: {
       targetId: input.targetId,
       equipmentId: input.equipmentId,
+      equipmentLabel: input.equipmentLabel,
       routeId: input.routeId,
+      objective: input.objective,
+      expectedDurationMinutes: input.expectedDurationMinutes,
+      safetyBoundaryLabel: input.safetyBoundaryLabel,
       parametersVersion: input.parametersVersion,
       safetyBoundaryVersion: input.safetyBoundaryVersion,
     },

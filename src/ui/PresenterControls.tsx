@@ -1,53 +1,46 @@
 import { useEffect } from "react";
-import type { DemoStep } from "../types/farm";
 import { useDemoSequence } from "../hooks/useDemoSequence";
+import { SMART_FARM_CHAPTERS, type SmartFarmChapter } from "../state/smartFarmState";
 import { useFarmStore } from "../state/useFarmStore";
 
-/**
- * 导演系统：演讲者控制层（fv-o6c.12，方案 B）。
- * 键控：空格 暂停/继续 · ←/→ 上一/下一章节 · Home 回安全总览机位。
- * 仅在演示中接管；输入框聚焦时不拦截。
- */
-const CHAPTERS: DemoStep[] = ["overview", "select-field", "inspect-risk", "irrigation", "recovered"];
-
-function chapterIndex(step: DemoStep): number {
-  return Math.max(0, CHAPTERS.indexOf(step === "drone-scan" ? "inspect-risk" : step));
+function chapterIndex(chapter: SmartFarmChapter): number {
+  return Math.max(0, SMART_FARM_CHAPTERS.indexOf(chapter));
 }
 
 export function PresenterControls() {
-  const introComplete = useFarmStore((s) => s.introComplete);
-  const demoPlaying = useFarmStore((s) => s.demoPlaying);
-  const paused = useFarmStore((s) => s.paused);
-  const demoStep = useFarmStore((s) => s.demoStep);
-  const applyDemoState = useFarmStore((s) => s.applyDemoState);
+  const introComplete = useFarmStore((state) => state.introComplete);
+  const demoPlaying = useFarmStore((state) => state.demoPlaying);
+  const paused = useFarmStore((state) => state.paused);
+  const chapter = useFarmStore((state) => state.smartFarmChapter);
+  const applySmartFarmChapter = useFarmStore((state) => state.applySmartFarmChapter);
   const { stop, togglePause } = useDemoSequence();
 
   useEffect(() => {
     if (!introComplete) return;
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
-      if (e.key === " " || e.code === "Space") {
+      if (event.key === " " || event.code === "Space") {
         if (!demoPlaying) return;
-        e.preventDefault();
+        event.preventDefault();
         togglePause();
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        const next = CHAPTERS[Math.min(CHAPTERS.length - 1, chapterIndex(demoStep) + 1)];
-        if (next) { stop(); applyDemoState(next); }
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        const prev = CHAPTERS[Math.max(0, chapterIndex(demoStep) - 1)];
-        if (prev) { stop(); applyDemoState(prev); }
-      } else if (e.key === "Home") {
-        e.preventDefault();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        const next = SMART_FARM_CHAPTERS[Math.min(SMART_FARM_CHAPTERS.length - 1, chapterIndex(chapter) + 1)];
+        if (next) { stop(); applySmartFarmChapter(next); }
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        const previous = SMART_FARM_CHAPTERS[Math.max(0, chapterIndex(chapter) - 1)];
+        if (previous) { stop(); applySmartFarmChapter(previous); }
+      } else if (event.key === "Home") {
+        event.preventDefault();
         stop();
-        applyDemoState("overview");
+        applySmartFarmChapter("base-online");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [introComplete, demoPlaying, demoStep, applyDemoState, stop, togglePause]);
+  }, [introComplete, demoPlaying, chapter, applySmartFarmChapter, stop, togglePause]);
 
   if (!introComplete || !demoPlaying) return null;
   return (

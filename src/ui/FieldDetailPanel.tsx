@@ -8,10 +8,12 @@ export function FieldDetailPanel() {
   const selectedId = useFarmStore((state) => state.selectedFieldId);
   const statuses = useFarmStore((state) => state.fieldStatuses);
   const progress = useFarmStore((state) => state.irrigationProgress);
+  const chapter = useFarmStore((state) => state.smartFarmChapter);
   const recoveryPhase = useFarmStore((state) => state.recoveryPhase);
   const setViewMode = useFarmStore((state) => state.setViewMode);
   const setLayerMode = useFarmStore((state) => state.setLayerMode);
-  const { irrigate } = useDemoSequence();
+  const applySmartFarmChapter = useFarmStore((state) => state.applySmartFarmChapter);
+  const { stop } = useDemoSequence();
   if (!selectedId) return null;
   const field = fieldById[selectedId];
   if (!field) return null;
@@ -63,8 +65,8 @@ export function FieldDetailPanel() {
         <button type="button" onClick={() => setLayerMode("growth")}><ScanLine size={16} />查看异常</button>
       </div>
       {isA02 && (
-        <button type="button" className="primary-action" onClick={() => void irrigate()} disabled={progress > 0 && progress < 1}>
-          <Droplets size={17} />{progress > 0 && progress < 1 ? `灌溉进行中 ${Math.round(progress * 100)}%` : progress >= 1 ? "重新播放灌溉" : "启动灌溉演示"}<ChevronRight size={16} />
+        <button type="button" className="primary-action" onClick={() => { stop(); applySmartFarmChapter("remote-decision"); }} disabled={chapter === "remote-decision" || progress > 0}>
+          <Droplets size={17} />{chapter === "remote-decision" ? "等待远程确认" : progress > 0 && progress < 1 ? `灌溉进行中 ${Math.round(progress * 100)}%` : progress >= 1 ? "处置结果已形成" : "查看处置方案"}<ChevronRight size={16} />
         </button>
       )}
     </aside>
