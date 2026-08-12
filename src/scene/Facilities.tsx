@@ -14,7 +14,7 @@ function useMaterialMaps(asset: "Concrete032" | "Metal025", repeat = 1): PbrSet 
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Color.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_NormalGL.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Roughness.ktx2`,
-  ]) as unknown as PbrSet;
+  ]);
   return useMemo(() => {
     const maps = [sourceColor.clone(), sourceNormal.clone(), sourceRoughness.clone()] as PbrSet;
     maps.forEach((texture) => { texture.wrapS = RepeatWrapping; texture.wrapT = RepeatWrapping; texture.repeat.set(repeat, repeat); });
@@ -199,7 +199,7 @@ function Gate() {
       ))}
       {/* bridge handrails */}
       {[-1.12, 1.12].flatMap((z) => [-3.45, -1.72, 0, 1.72, 3.45].map((x) => (
-        <mesh key={`${z}-${x}`} position={[x, 6.02, z]} castShadow>
+        <mesh key={`${z}-${x}`} position={[x, 6.02, z]}>
           <cylinderGeometry args={[0.055, 0.055, 1.65, 8]} />
           <meshStandardMaterial color="#b8ad62" metalness={0.56} roughness={0.44} />
         </mesh>
@@ -207,7 +207,7 @@ function Gate() {
       {[-1.12, 1.12].map((z) => (
         <group key={z}>
           {[5.55, 6.65].map((y) => (
-            <mesh key={y} position={[0, y, z]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <mesh key={y} position={[0, y, z]} rotation={[0, 0, Math.PI / 2]}>
               <cylinderGeometry args={[0.055, 0.055, 7.1, 8]} />
               <meshStandardMaterial color="#b8ad62" metalness={0.56} roughness={0.44} />
             </mesh>

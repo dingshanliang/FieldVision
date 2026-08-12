@@ -28,7 +28,6 @@ button { color: inherit; }
 }
 
 .farm-canvas { position: absolute !important; inset: 0; }
-.grain { position: absolute; inset: 0; pointer-events: none; opacity: .12; mix-blend-mode: soft-light; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E"); }
 .top-bar { position: absolute; z-index: 45; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 25px 30px; pointer-events: none; background: linear-gradient(180deg, rgba(3,10,7,.66), transparent); }
 .top-bar button, .top-bar .top-status { pointer-events: auto; }
 .brand-lockup { display: flex; flex: 0 0 auto; align-items: center; gap: 12px; min-width: 220px; }

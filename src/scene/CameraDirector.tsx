@@ -11,6 +11,8 @@ const overview = { position: [210, 86, 223] as const, target: [-8, 2, -18] as co
 // The URL cannot change without a navigation; parse the QA escape hatch once,
 // not on every rendered frame.
 const QA_MODE = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("qa");
+const REDUCED_MOTION = typeof window !== "undefined"
+  && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function CameraDirector() {
   const controls = useRef<CameraControlsImpl>(null);
@@ -119,6 +121,15 @@ export function CameraDirector() {
     const current = controls.current;
     if (!current || introRan.current || introComplete) return;
     introRan.current = true;
+    if (REDUCED_MOTION) {
+      current.setLookAt(...overview.position, ...overview.target, false);
+      basePosition.current.set(...overview.position);
+      baseTarget.current.set(...overview.target);
+      transitioning.current = false;
+      setIntroComplete(true);
+      setDemoStep("overview");
+      return;
+    }
     // Generation token: the awaited promises below resolve on camera-controls
     // 'rest' events, which janky first-frame shader compilation can delay or
     // skip past the 6s fallback — a late resolution must become a no-op, not
@@ -262,6 +273,9 @@ export function CameraDirector() {
       breathingRampStart.current = now;
       return;
     }
+    // Keep explicit chapter transitions available, but never add ambient camera
+    // drift for viewers who asked the OS to reduce continuous motion.
+    if (REDUCED_MOTION) return;
     // Ease the drift in from zero amplitude so activating breathing never
     // snaps the camera.
     const ramp = Math.min(1, (now - breathingRampStart.current) / BREATHING_RAMP_MS);

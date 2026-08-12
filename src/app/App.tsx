@@ -77,7 +77,6 @@ export function App() {
     <main className={`app-shell${present ? " is-present" : ""}`}>
       <FarmCanvas />
       <AutoDemo />
-      <div className="grain" aria-hidden="true" />
       <div className={`letterbox${cinematic ? " is-active" : ""}`} aria-hidden="true" />
       {present ? null : (
         <>

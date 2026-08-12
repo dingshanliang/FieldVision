@@ -5,9 +5,10 @@
  * 可发现性（fv-66y.13）：默认 🔇 图标对首次观众几乎不可见——开场结束后的 ~8s 短窗
  * 内、未开启时，在 toggle 旁加一个 "▶ 点击开启电影音效" 脉冲提示。开启或超时即消失。
  */
-import { useCallback, useEffect, useState } from "react";
-import { audioEngine } from "../audio/audioEngine";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { audioEngine, type AudioCue } from "../audio/audioEngine";
 import { useFarmStore } from "../state/useFarmStore";
+import { deriveIrrigationEvent, type IrrigationStage } from "../state/irrigationEvent";
 
 const HINT_DURATION_MS = 8_000;
 
@@ -18,11 +19,38 @@ export function SoundToggle() {
   const demoStep = useFarmStore((s) => s.demoStep);
   const introComplete = useFarmStore((s) => s.introComplete);
   const hintVisible = introComplete && !enabled && !hintDismissed;
+  const previousStage = useRef<IrrigationStage>(deriveIrrigationEvent(useFarmStore.getState().irrigationProgress).stage);
+  const previousRecovery = useRef(useFarmStore.getState().recoveryPhase);
 
   // Keep the engine's chapter SFX in sync with the demo while sound is on.
   useEffect(() => {
     if (enabled) audioEngine.setChapter(demoStep);
   }, [demoStep, enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const stageCue: Partial<Record<IrrigationStage, AudioCue>> = {
+      "pump-starting": "pump",
+      "gate-opening": "gate",
+      "main-channel": "channel",
+      "east-branch": "channel",
+      "field-inlet": "inlet",
+      wetting: "wetting",
+      verified: "verified",
+    };
+    return useFarmStore.subscribe((state) => {
+      const stage = deriveIrrigationEvent(state.irrigationProgress).stage;
+      if (stage !== previousStage.current) {
+        previousStage.current = stage;
+        const cue = stageCue[stage];
+        if (cue) audioEngine.sfx(cue);
+      }
+      if (state.recoveryPhase !== previousRecovery.current) {
+        previousRecovery.current = state.recoveryPhase;
+        if (state.recoveryPhase === "resolved") audioEngine.sfx("recovered");
+      }
+    });
+  }, [enabled]);
 
   // 提示展示后 ~8s 自动消失。setState 仅在 setTimeout 异步触发，避免 set-state-in-effect。
   useEffect(() => {

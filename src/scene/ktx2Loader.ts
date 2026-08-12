@@ -17,13 +17,21 @@ import type { Texture } from "three";
 
 export const ktx2Loader = new KTX2Loader().setTranscoderPath("/assets/libs/basis/");
 
-/** Load KTX2 textures; guarantees detectSupport runs before the first load. */
-export function useKtx2(urls: string[]): Texture[] {
+type TextureTuple<Urls extends readonly string[]> = {
+  -readonly [Index in keyof Urls]: Texture;
+};
+
+/** Load a fixed KTX2 set while preserving its tuple arity in the result. */
+export function useKtx2<const Urls extends readonly string[]>(urls: Urls): TextureTuple<Urls> {
   const gl = useThree((state) => state.gl);
   const inited = useRef<boolean | null>(null);
   if (inited.current === null) {
     ktx2Loader.detectSupport(gl);
     inited.current = true;
   }
-  return useLoader(ktx2Loader, urls);
+  const maps = useLoader(ktx2Loader, [...urls]);
+  if (import.meta.env.DEV && maps.length !== urls.length) {
+    throw new Error(`KTX2 set arity mismatch: requested ${urls.length}, received ${maps.length}`);
+  }
+  return maps as unknown as TextureTuple<Urls>;
 }

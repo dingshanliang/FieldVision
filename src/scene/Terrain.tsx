@@ -35,7 +35,7 @@ export function Terrain() {
     "/assets/textures/source/Ground026/Ground026_1K-JPG_Color.ktx2",
     "/assets/textures/source/Ground026/Ground026_1K-JPG_NormalGL.ktx2",
     "/assets/textures/source/Ground026/Ground026_1K-JPG_Roughness.ktx2",
-  ]) as unknown as [Texture, Texture, Texture];
+  ]);
   const [colorMap, normalMap, roughnessMap] = useMemo(() => {
     const maps = [sourceColor.clone(), sourceNormal.clone(), sourceRoughness.clone()] as [Texture, Texture, Texture];
     maps.forEach((texture) => { texture.wrapS = RepeatWrapping; texture.wrapT = RepeatWrapping; texture.repeat.set(20, 16); });

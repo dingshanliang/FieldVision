@@ -1,5 +1,6 @@
-import { Bloom, DepthOfField, EffectComposer, N8AO, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
-import { ToneMappingMode } from "postprocessing";
+import { Bloom, ChromaticAberration, DepthOfField, EffectComposer, N8AO, Noise, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
+import { BlendFunction, ToneMappingMode } from "postprocessing";
+import { Vector2 } from "three";
 import { visualConfig } from "../config/visual";
 import { useFarmStore } from "../state/useFarmStore";
 
@@ -16,6 +17,8 @@ function dofPreset(viewMode: string, demoStep: string) {
 function aoEnabled(): boolean {
   return typeof window === "undefined" || new URLSearchParams(window.location.search).get("ao") !== "0";
 }
+
+const chromaticOffset = new Vector2(0.00065, 0.00035);
 
 /**
  * Heavy optical pipeline. FarmScene loads this module after the browser's first
@@ -61,6 +64,14 @@ export function ScenePostProcessing() {
     />,
     <ToneMapping key="tone" mode={ToneMappingMode.ACES_FILMIC} />,
     <SMAA key="smaa" />,
+    <ChromaticAberration
+      key="chromatic-aberration"
+      blendFunction={BlendFunction.NORMAL}
+      offset={chromaticOffset}
+      radialModulation
+      modulationOffset={0.22}
+    />,
+    <Noise key="grain" opacity={0.045} blendFunction={BlendFunction.SOFT_LIGHT} />,
     <Vignette key="vignette" eskil={false} offset={0.32} darkness={0.26} />,
   ];
 

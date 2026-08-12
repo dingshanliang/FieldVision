@@ -10,6 +10,8 @@
  */
 import type { DemoStep } from "../types/farm";
 
+export type AudioCue = "pump" | "gate" | "channel" | "inlet" | "wetting" | "verified" | "recovered" | "chirp";
+
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -95,6 +97,50 @@ class AudioEngine {
     const t = this.ctx.currentTime + 0.5;
     this.motorGain?.gain.linearRampToValueAtTime(step === "drone-scan" ? 0.07 : 0, t);
     this.waterGain?.gain.linearRampToValueAtTime(step === "irrigation" ? 0.05 : 0, t);
+  }
+
+  /** Short event-synchronised cues; ignored until the viewer enables sound. */
+  sfx(cue: AudioCue) {
+    const ctx = this.ctx;
+    const master = this.master;
+    if (!ctx || !master || !this.on) return;
+    const now = ctx.currentTime;
+    if (cue === "channel" || cue === "inlet" || cue === "wetting") {
+      const source = this.noiseSource();
+      source.loop = false;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = cue === "channel" ? 720 : cue === "inlet" ? 1_250 : 1_850;
+      filter.Q.value = cue === "wetting" ? 0.45 : 0.8;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(cue === "wetting" ? 0.07 : 0.1, now + 0.035);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+      source.connect(filter).connect(gain).connect(master);
+      source.start(now);
+      source.stop(now + 0.46);
+      return;
+    }
+
+    const tones: Record<Exclude<AudioCue, "channel" | "inlet" | "wetting">, [number, number, OscillatorType]> = {
+      pump: [62, 118, "sine"],
+      gate: [180, 108, "square"],
+      verified: [392, 587, "sine"],
+      recovered: [523, 784, "sine"],
+      chirp: [1_250, 1_920, "sine"],
+    };
+    const [from, to, type] = tones[cue];
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(from, now);
+    oscillator.frequency.exponentialRampToValueAtTime(to, now + 0.22);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(cue === "pump" ? 0.08 : 0.055, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + (cue === "recovered" ? 0.52 : 0.32));
+    oscillator.connect(gain).connect(master);
+    oscillator.start(now);
+    oscillator.stop(now + 0.56);
   }
 
   get isEnabled() { return this.on; }

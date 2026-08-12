@@ -16,6 +16,26 @@ copied from `node_modules/three/examples/jsm/libs/basis/`).
   `Terrain`, `FieldParcel`, `Facilities`, `IrrigationNetwork`.
 - Original JPGs removed (recoverable from git history).
 
+## Restore authoring sources
+
+The converter intentionally reads the original JPG authoring files, not the
+runtime KTX2 outputs. Restore only the JPGs deleted by the conversion commit;
+this leaves the current `.ktx2` files untouched:
+
+```bash
+KTX2_COMMIT=8c059cc3b8b93b8ad96be4a8a1aaa5227a1d0199
+git diff-tree --no-commit-id --name-only --diff-filter=D -r "$KTX2_COMMIT" \
+  -- public/assets/textures/source \
+  | while IFS= read -r source; do
+      git restore --source="${KTX2_COMMIT}^" -- "$source"
+    done
+```
+
+Then run `scripts/textures/convert-ktx2.sh`. The restored JPGs are authoring
+inputs and should not be committed alongside the browser-ready KTX2 files.
+Review `git status` after conversion and remove only those restored JPGs once
+visual verification is complete.
+
 ## Decision log
 
 - **UASTC rejected for normals/roughness**: ~2.3 MB/map vs ~0.3 MB ETC1S, no visible

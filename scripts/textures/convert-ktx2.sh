@@ -21,6 +21,12 @@ command -v toktx >/dev/null 2>&1 || {
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SRC="$ROOT/public/assets/textures/source"
 
+source_count="$(find "$SRC" -type f \( -name "*_Color.jpg" -o -name "*_NormalGL.jpg" -o -name "*_Roughness.jpg" \) | wc -l | tr -d ' ')"
+if [[ "$source_count" -eq 0 ]]; then
+  echo "ERROR: no source JPGs found under '$SRC'. Restore them using scripts/textures/README.md." >&2
+  exit 1
+fi
+
 etc1s() { # <qlevel> <oetf> <in> <out>
   toktx --encode etc1s --qlevel "$1" --genmipmap --assign_oetf "$2" "$4" "$3"
 }

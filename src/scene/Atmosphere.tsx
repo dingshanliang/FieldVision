@@ -23,6 +23,7 @@ import {
 import { visualConfig } from "../config/visual";
 import { seededRandom } from "../utils/geometry";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
+import { useFarmStore } from "../state/useFarmStore";
 import { SafePhotographicHorizon } from "./PhotographicHorizon";
 import { BirdFlock } from "./BirdFlock";
 
@@ -338,7 +339,11 @@ function DustMotes({ count }: { count: number }) {
 
 export function Atmosphere() {
   const tier = usePerformanceTier();
-  const shadowSize = tier === "high" ? 4096 : tier === "medium" ? 2048 : 1024;
+  const demoStep = useFarmStore((state) => state.demoStep);
+  const heroShot = demoStep !== "overview";
+  const shadowSize = tier === "low" ? 1024 : 2048;
+  const shadowHorizontal = heroShot ? 95 : 210;
+  const shadowVertical = heroShot ? 95 : 190;
   return (
     <>
       <fogExp2 attach="fog" args={[visualConfig.fogColor, visualConfig.fogDensity]} />
@@ -355,15 +360,14 @@ export function Atmosphere() {
         color={visualConfig.sunColor}
         castShadow={tier !== "low"}
         shadow-mapSize={[shadowSize, shadowSize]}
-        shadow-camera-left={-210}
-        shadow-camera-right={210}
-        shadow-camera-top={190}
-        shadow-camera-bottom={-190}
+        shadow-camera-left={-shadowHorizontal}
+        shadow-camera-right={shadowHorizontal}
+        shadow-camera-top={shadowVertical}
+        shadow-camera-bottom={-shadowVertical}
         shadow-camera-near={10}
         shadow-camera-far={720}
         shadow-bias={-0.00012}
         shadow-normalBias={0.6}
-        shadow-radius={5}
       />
       <SafePhotographicHorizon fallback={<TreeLine />} />
       {tier !== "low" && <BirdFlock />}

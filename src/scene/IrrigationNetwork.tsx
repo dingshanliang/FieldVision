@@ -88,7 +88,7 @@ function createEdgeBands(path: CatmullRomCurve3, outerWidth: number, innerWidth:
 }
 
 function useWaterNormal(): Texture {
-  const [sourceNormal] = useKtx2(["/assets/textures/source/Ground037/Ground037_1K-JPG_NormalGL.ktx2"]) as unknown as [Texture];
+  const [sourceNormal] = useKtx2(["/assets/textures/source/Ground037/Ground037_1K-JPG_NormalGL.ktx2"]);
   return useMemo(() => {
     const map = sourceNormal.clone();
     map.wrapS = RepeatWrapping;
@@ -103,7 +103,7 @@ function useChannelMaps(asset: "Concrete032" | "Ground037"): [Texture, Texture, 
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Color.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_NormalGL.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Roughness.ktx2`,
-  ]) as unknown as [Texture, Texture, Texture];
+  ]);
   return useMemo(() => {
     const maps = [sourceColor.clone(), sourceNormal.clone(), sourceRoughness.clone()] as [Texture, Texture, Texture];
     maps.forEach((map) => {

@@ -20,7 +20,7 @@ function useConfiguredMaps(asset: "Ground037" | "Ground026", repeat: number): Pb
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Color.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_NormalGL.ktx2`,
     `/assets/textures/source/${asset}/${asset}_1K-JPG_Roughness.ktx2`,
-  ]) as unknown as PbrSet;
+  ]);
   return useMemo(() => {
     const maps = [sourceColor.clone(), sourceNormal.clone(), sourceRoughness.clone()] as PbrSet;
     maps.forEach((texture) => { texture.wrapS = RepeatWrapping; texture.wrapT = RepeatWrapping; texture.repeat.set(repeat, repeat); });
