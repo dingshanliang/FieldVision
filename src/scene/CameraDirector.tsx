@@ -214,8 +214,14 @@ export function CameraDirector() {
       scratchFollow.current.set(drone.x - 22, drone.y + 16, drone.z - 22);
       followPos.current.lerp(scratchFollow.current, Math.min(1, delta * 2.5));
       followTarget.current.lerp(drone, Math.min(1, delta * 4));
+      // fv-66y.22: 手持微震——完美的平滑跟随是"实拍"反指标。低幅度异频正弦
+      // 叠加在 lerp 之后的最终相机位置上，读作操作员手持而非 bug。
+      // delta-scaled 不需要：sin 是连续函数，幅度恒定。
+      const shakeT = clock.elapsedTime;
+      const shakeX = Math.sin(shakeT * 1.7) * 0.08 + Math.sin(shakeT * 4.1 + 0.7) * 0.03;
+      const shakeY = Math.sin(shakeT * 2.3 + 1.2) * 0.05 + Math.sin(shakeT * 3.3 + 2.1) * 0.02;
       current.setLookAt(
-        followPos.current.x, followPos.current.y, followPos.current.z,
+        followPos.current.x + shakeX, followPos.current.y + shakeY, followPos.current.z,
         followTarget.current.x, followTarget.current.y, followTarget.current.z,
         false,
       );

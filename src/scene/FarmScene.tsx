@@ -24,6 +24,10 @@ import { perfEnabled } from "./perfStats";
 function dofPreset(viewMode: string, demoStep: string) {
   if (viewMode === "field-ground" || demoStep === "inspect-risk") return { focus: 62, range: 95 };
   if (demoStep === "drone-scan") return { focus: 76, range: 110 };
+  // fv-66y.21: 灌溉高潮与恢复验证给浅景深——之前这两拍反而全焦，是最不重要的
+  // inspect 倒有 DOF。灌溉时相机停在 inlet [66,52,-20]→[23,4,-66]，到水/作物是焦点。
+  if (demoStep === "irrigation") return { focus: 48, range: 80 };
+  if (demoStep === "recovered") return { focus: 70, range: 100 };
   return null;
 }
 

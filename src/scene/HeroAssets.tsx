@@ -1,6 +1,7 @@
 import { useGLTF } from "@react-three/drei";
 import { heroIrrigationInlet } from "../data/fields";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
+import { SceneErrorBoundary } from "./SceneErrorBoundary";
 
 /**
  * A02 hero 资产集合（fv-o6c.9，Blender 自制 GLB，第二批）。
@@ -61,11 +62,13 @@ function RiceClusters() {
  */
 export function HeroAssets() {
   const tier = usePerformanceTier();
+  // 每个 hero GLB 各自包边界（fv-66y.14）：单个资产 404/解码失败只降级它自己，
+  // 不杀全局。fallback=null 即静默缺失——演示流程的旁白/字幕仍能继续。
   return (
     <group>
-      <CanalInlet />
-      {tier !== "low" && <Culvert />}
-      {tier === "high" && <RiceClusters />}
+      <SceneErrorBoundary name="CanalInlet"><CanalInlet /></SceneErrorBoundary>
+      {tier !== "low" && <SceneErrorBoundary name="Culvert"><Culvert /></SceneErrorBoundary>}
+      {tier === "high" && <SceneErrorBoundary name="RiceClusters"><RiceClusters /></SceneErrorBoundary>}
     </group>
   );
 }

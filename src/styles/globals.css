@@ -125,6 +125,31 @@ button { color: inherit; }
 .timecut__label { font: 500 22px/1.2 "Newsreader Variable",Georgia,serif; color: #f4f1ea; }
 @keyframes timecut-in { from { opacity: 0; transform: translate(-50%,-42%); } to { opacity: 1; transform: translate(-50%,-50%); } }
 
+/* 2.39:1 letterbox（fv-66y.22）：仅在 drone-scan/recovered 两拍渐入。pointer-events:none，
+   z-index 60 高于字幕/timecut，纯电影感裁切。CSS transition 取代 gsap——简单的 height
+   动画不需要时间轴库，且不增加首屏 JS。 */
+.letterbox { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.letterbox::before, .letterbox::after { content: ""; position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 600ms cubic-bezier(.2,.8,.2,1); }
+.letterbox::before { top: 0; }
+.letterbox::after { bottom: 0; }
+.letterbox.is-active::before, .letterbox.is-active::after { height: 8vh; }
+@media (max-width: 720px) { .letterbox.is-active::before, .letterbox.is-active::after { height: 6vh; } }
+
+/* 章节字幕带（fv-66y.13）：bottom lower-third 单句字幕，跟随 demoStep/recoveryPhase。
+   每次 React key 变化触发 caption-in 重播。pointer-events:none 避免遮挡演示操作。 */
+.chapter-caption { position: fixed; bottom: 116px; left: 50%; transform: translateX(-50%); z-index: 50; max-width: min(680px, 86vw); padding: 10px 18px; border: 1px solid rgba(150,214,196,.18); border-radius: 10px; background: rgba(8,18,15,.66); backdrop-filter: blur(10px); color: #f4f1ea; font-family: "Newsreader Variable", Georgia, serif; font-size: clamp(.95rem, 1.4vw, 1.18rem); font-weight: 420; line-height: 1.45; text-align: center; text-shadow: 0 2px 14px rgba(0,0,0,.5); pointer-events: none; animation: caption-in 320ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes caption-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (max-width: 720px) { .chapter-caption { bottom: 96px; font-size: .92rem; padding: 8px 14px; } }
+
+/* 跳过开场按钮（fv-66y.13）：嵌在 intro-caption 下方，规范 §"必须提供跳过开场"。 */
+.intro-caption .intro-skip { margin-top: 6px; padding: 5px 12px; border: 1px solid rgba(247,232,214,.32); border-radius: 999px; background: rgba(8,16,14,.5); color: rgba(247,232,214,.82); font: 500 11px/1 ui-sans-serif, system-ui; letter-spacing: .04em; cursor: pointer; transition: background 160ms ease, color 160ms ease; }
+.intro-caption .intro-skip:hover { background: rgba(247,232,214,.16); color: #fff; }
+
+/* 音效可发现性提示（fv-66y.13）：开场后 ~8s 内、未开启时在 toggle 左侧脉冲。 */
+.sound-hint { position: fixed; right: 50px; top: 12px; z-index: 40; height: 32px; padding: 0 12px 0 10px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(150,214,196,.32); border-radius: 16px; background: rgba(8,16,14,.78); color: #cfe8dd; font: 500 11px/1 ui-sans-serif, system-ui; white-space: nowrap; pointer-events: none; animation: sound-hint-pulse 1.8s ease-in-out infinite; }
+@keyframes sound-hint-pulse { 0%,100% { transform: translateX(0); opacity: .82; } 50% { transform: translateX(-3px); opacity: 1; } }
+@media (max-width: 720px) { .sound-hint { display: none; } }
+
 /* 导演系统：演讲者控制层（fv-o6c.12）。 */
 .demo-controls { display: flex; align-items: center; gap: 12px; }
 .pacing-toggle { display: inline-flex; border: 1px solid rgba(225,237,229,.18); border-radius: 999px; overflow: hidden; }

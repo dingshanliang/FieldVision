@@ -15,6 +15,7 @@ import {
 import { fields } from "../data/fields";
 import { createCropClumpGeometry, pointInPolygon, seededRandom } from "../utils/geometry";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
+import { SceneErrorBoundary } from "./SceneErrorBoundary";
 
 interface DetailSpec {
   x: number;
@@ -279,9 +280,13 @@ export function GroundDetails() {
       <FieldMarginVegetation count={tier === "high" ? 1400 : tier === "medium" ? 720 : 280} />
       <Stones count={tier === "high" ? 96 : tier === "medium" ? 52 : 24} />
       {tier !== "low" && <UtilityLine />}
-      <FarmUtilityVehicle />
+      <SceneErrorBoundary name="FarmUtilityVehicle"><FarmUtilityVehicle /></SceneErrorBoundary>
       {tier !== "low" && <FieldWorker />}
       <HeroIrrigationInlet />
     </group>
   );
 }
+
+// fv-66y.17: 与其他 hero GLB 一致，模块作用域预加载——把 fetch 推到首屏并行队列，
+// 否则只在 GroundDetails mount 时才发起，造成首屏 load 瀑布。
+useGLTF.preload("/assets/models/fieldvision-utility-vehicle.glb");

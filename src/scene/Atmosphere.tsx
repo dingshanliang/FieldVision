@@ -353,7 +353,7 @@ export function Atmosphere() {
         position={[sunDirection.x * 260, sunDirection.y * 260, sunDirection.z * 260]}
         intensity={visualConfig.sunIntensity}
         color={visualConfig.sunColor}
-        castShadow
+        castShadow={tier !== "low"}
         shadow-mapSize={[shadowSize, shadowSize]}
         shadow-camera-left={-210}
         shadow-camera-right={210}

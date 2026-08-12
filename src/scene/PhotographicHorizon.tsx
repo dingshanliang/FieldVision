@@ -4,6 +4,12 @@ import { BackSide, SRGBColorSpace } from "three";
 import type { WebGLProgramParametersWithUniforms } from "three";
 
 function JiangnanHorizon() {
+  // fv-66y.16 (DEFERRED): KTX2 swap attempted with ETC1S q255 + UASTC q1/q2 variants,
+  // all caused render loop to degrade from ~75 fps to ~1 fps (frames counter crawled
+  // ~10/30s). PNG still works at full fps. Likely root cause: three.js KTX2Loader +
+  // non-PoT 1774×887 + the onBeforeCompile shader patch + clone() interaction. Needs
+  // standalone repro outside the full scene to isolate. PNG 2.0MB stays in budget gap
+  // tracking (perf doc §3.1). Re-apply with diagnostics in a follow-up session.
   const source = useTexture("/assets/environment/jiangnan-rice-horizon-v1.png");
   const texture = useMemo(() => {
     const result = source.clone();

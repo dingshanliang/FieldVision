@@ -1,7 +1,7 @@
 import { Canvas } from "@react-three/fiber";
-import { Suspense } from "react";
 import { ACESFilmicToneMapping, PCFShadowMap } from "three";
 import { FarmScene } from "./FarmScene";
+import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 
 export function FarmCanvas() {
@@ -22,12 +22,12 @@ export function FarmCanvas() {
   return (
     <Canvas
       className="farm-canvas"
-      shadows={{ type: PCFShadowMap }}
+      shadows={tier !== "low" ? { type: PCFShadowMap } : false}
       dpr={dpr}
       camera={{ position: [248, 148, 276], fov: 45, near: 0.1, far: 1600 }}
       gl={{ antialias: true, alpha: false, powerPreference: "high-performance", toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1 }}
     >
-      <Suspense fallback={null}><FarmScene /></Suspense>
+      <SceneErrorBoundary name="FarmScene"><FarmScene /></SceneErrorBoundary>
     </Canvas>
   );
 }

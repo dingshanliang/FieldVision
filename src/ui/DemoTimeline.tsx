@@ -19,9 +19,28 @@ export function DemoTimeline() {
   const introComplete = useFarmStore((state) => state.introComplete);
   const applyDemoState = useFarmStore((state) => state.applyDemoState);
   const setPacing = useFarmStore((state) => state.setPacing);
+  const setIntroComplete = useFarmStore((s) => s.setIntroComplete);
+  const setDemoStep = useFarmStore((s) => s.setDemoStep);
   const { play, stop, togglePause } = useDemoSequence();
   const activeIndex = Math.max(0, steps.findIndex((step) => step.id === current || (current === "drone-scan" && step.id === "inspect-risk")));
-  if (!introComplete) return <div className="intro-caption"><span>FIELDVISION / 01</span><strong>每一块田，都可以进入</strong><small>Loading spatial twin</small></div>;
+  if (!introComplete) {
+    // 开场 descent 期间提供跳过控制（规范 docs/CODEX_TASK_3D_FARMLAND_DEMO.md:610
+    // "必须提供跳过开场"）。只翻 introComplete=true —— CameraDirector 的 intro
+    // promise chain 的 isCurrent() 会因此 false 化为 no-op，下一个 effect 会把
+    // 相机飞到 overview，无需直接操控 introGeneration ref。
+    const skipIntro = () => {
+      setIntroComplete(true);
+      setDemoStep("overview");
+    };
+    return (
+      <div className="intro-caption">
+        <span>FIELDVISION / 01</span>
+        <strong>每一块田，都可以进入</strong>
+        <small>Loading spatial twin</small>
+        <button type="button" className="intro-skip" onClick={skipIntro} aria-label="跳过开场动画">跳过开场 →</button>
+      </div>
+    );
+  }
   function jumpTo(step: DemoStep) {
     stop();
     applyDemoState(step);

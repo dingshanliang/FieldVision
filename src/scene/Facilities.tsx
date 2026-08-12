@@ -1,6 +1,7 @@
 import { Html, RoundedBox, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useKtx2 } from "./ktx2Loader";
+import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { useMemo, useRef } from "react";
 import { ExtrudeGeometry, Group, MeshStandardMaterial, RepeatWrapping, Shape, SRGBColorSpace, Texture } from "three";
 import { useFarmStore } from "../state/useFarmStore";
@@ -324,7 +325,7 @@ export function Facilities() {
     <group>
       <PumpStation />
       <Gate />
-      <HeroPumpSkid />
+      <SceneErrorBoundary name="HeroPumpSkid"><HeroPumpSkid /></SceneErrorBoundary>
       <WeatherStation />
       <Warehouse />
     </group>
