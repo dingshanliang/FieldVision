@@ -4,6 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Raycaster, Vector2, Vector3 } from "three";
 import { fieldById } from "../data/fields";
+import { smartMachineCameraForChapter } from "../data/smartMachineAssets";
 import { useFarmStore } from "../state/useFarmStore";
 import { droneWorldPosition } from "./dronePosition";
 
@@ -172,6 +173,11 @@ export function CameraDirector() {
     if (!current || !introComplete) return;
     current.smoothTime = 0.72;
     if (viewMode === "overview" || !selectedFieldId) {
+      const machineShot = smartMachineCameraForChapter(smartFarmChapter);
+      if (machineShot) {
+        flyTo(machineShot.position, machineShot.target, true);
+        return;
+      }
       const shot = smartFarmChapter === "base-online"
         ? smartYardOverview
         : smartFarmChapter === "daily-plan"

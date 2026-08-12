@@ -16,6 +16,9 @@ All downloaded runtime assets in this repository are CC0. Attribution is not leg
 | Hero Rice Cluster GLB | Project-generated via Blender script `scripts/blender/create_hero_assets_2.py` (fv-o6c.9) | Project-owned (self-authored) | A02 近景前景英雄水稻丛（分蘖+叶片+稻穗）；`public/assets/models/fieldvision-rice-cluster.glb` | 2026-07-23 |
 | Utility Vehicle GLB | Project-generated via Blender script `scripts/blender/create_utility_vehicle.py` (fv-66y.12, Blender 自制) | Project-owned (self-authored) | 机耕路比例锚点农用 utility truck（chassis+cab+cargo bed+4 轮+防滚架+大灯/尾灯）；`public/assets/models/fieldvision-utility-vehicle.glb` | 2026-08-12 |
 | Field Worker GLB | Project-generated via Blender script `scripts/blender/create_field_worker.py` (fv-66y.20, Blender 自制) | Project-owned (self-authored) | A02 英雄镜头农事人员（弯腰检查姿态 + 田间终端 + 根区探针），替代基本几何人偶；`public/assets/models/fieldvision-field-worker.glb` | 2026-08-12 |
+| Autonomous Tractor + 6-row Seeder GLB | Project-generated via Blender script `scripts/blender/create_smart_farm_machines.py` (fv-8zm.12) | Project-owned (self-authored) | B03 夏大豆补播英雄设备；含无人驾驶传感、RTK、车轮、三点连接与六行播种单元活动节点；`public/assets/models/fieldvision-autonomous-tractor-seeder.glb` | 2026-08-13 |
+| Field Inspection Robot GLB | Project-generated via Blender script `scripts/blender/create_smart_farm_machines.py` (fv-8zm.12) | Project-owned (self-authored) | A03 / B02 机耕路与田缘巡检英雄设备；含履带、传感云台、双目相机、RTK 与探针活动节点；`public/assets/models/fieldvision-inspection-robot.glb` | 2026-08-13 |
+| Autonomous Maintenance Vehicle GLB | Project-generated via Blender script `scripts/blender/create_smart_farm_machines.py` (fv-8zm.12) | Project-owned (self-authored) | 泵站与渠道维护带割草任务英雄设备；含四轮底盘、割草盘、安全裙边、LiDAR 与警示灯活动节点；`public/assets/models/fieldvision-maintenance-vehicle.glb` | 2026-08-13 |
 
 ## Processing policy
 

@@ -85,6 +85,7 @@ function SupportNetwork() {
   const { nodes, labeledNodeIds } = useMemo(() => selectSupportNetwork(tier), [tier]);
   const corridor = corridorForChapter(chapter);
   const topologyVisible = chapter === "base-online" || chapter === "daily-plan" || chapter === "return-overview";
+  const machineCloseup = chapter === "autonomous-operations" || chapter === "coordinated-patrol";
 
   const applyBodies = (mesh: import("three").InstancedMesh | null) => {
     if (!mesh) return;
@@ -148,7 +149,7 @@ function SupportNetwork() {
         const detail = topologyVisible ? "route" : spatialDetailLevel(distance);
         if (detail === "silhouette") return null;
         return (
-          <Html key={node.id} position={[node.position[0], node.position[1] + (node.kind === "rtk" ? 8.2 : node.kind === "crop-camera" ? 4.9 : 1.8), node.position[2]]} center distanceFactor={96} zIndexRange={[24, 3]}>
+          <Html key={node.id} position={[node.position[0], node.position[1] + (node.kind === "rtk" ? 8.2 : node.kind === "crop-camera" ? 4.9 : 1.8), node.position[2]]} center distanceFactor={machineCloseup ? 34 : 96} zIndexRange={[24, 3]}>
             <div className={`support-node-tag support-node-tag--${detail}`}>
               <i style={{ background: NODE_COLOR[node.kind] }} />
               <span>{node.label}</span>
@@ -158,7 +159,7 @@ function SupportNetwork() {
       })}
 
       {corridor ? (
-        <Html position={[corridor.focus[0], corridor.focus[1] + 5.8, corridor.focus[2]]} center distanceFactor={82} zIndexRange={[27, 4]}>
+        <Html position={[corridor.focus[0], corridor.focus[1] + 5.8, corridor.focus[2]]} center distanceFactor={machineCloseup ? 30 : 82} zIndexRange={[27, 4]}>
           <div className="task-corridor-tag"><i style={{ background: corridor.color }} />{corridor.label}</div>
         </Html>
       ) : null}
