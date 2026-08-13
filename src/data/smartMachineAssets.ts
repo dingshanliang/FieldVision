@@ -9,6 +9,7 @@ export interface SmartMachineAsset {
   url: string;
   maxBytes: number;
   requiredNodes: readonly string[];
+  supportLodHiddenNodes: readonly string[];
   chapter: SmartFarmChapter;
   position: readonly [number, number, number];
   rotationY: number;
@@ -34,6 +35,7 @@ export const SMART_MACHINE_ASSETS: readonly SmartMachineAsset[] = [
     url: "/assets/models/fieldvision-maintenance-vehicle.glb",
     maxBytes: 300_000,
     requiredNodes: ["MaintenanceVehicleRig", "MowerDeckRig", "MowerBlade", "SafetyBeacon"],
+    supportLodHiddenNodes: ["BatteryCover", "RearTowPoint", "FrontCamera", "Lidar", "SensorMast"],
     chapter: "daily-plan",
     position: [-101, 0.18, 91],
     rotationY: -0.35,
@@ -47,6 +49,7 @@ export const SMART_MACHINE_ASSETS: readonly SmartMachineAsset[] = [
     url: "/assets/models/fieldvision-autonomous-tractor-seeder.glb",
     maxBytes: 500_000,
     requiredNodes: ["AutonomousTractorRig", "TractorBodyRig", "SeederLift", "RowUnit_6"],
+    supportLodHiddenNodes: ["LeftMarkerArm", "RightMarkerArm", "CabGlassLeft", "CabGlassRear", "CabGlassRight", "WheelHubFront_-1.05", "WheelHubFront_1.05"],
     chapter: "autonomous-operations",
     position: [112, 0.58, 35],
     rotationY: -1.35,
@@ -60,6 +63,7 @@ export const SMART_MACHINE_ASSETS: readonly SmartMachineAsset[] = [
     url: "/assets/models/fieldvision-inspection-robot.glb",
     maxBytes: 300_000,
     requiredNodes: ["InspectionRobotRig", "TrackLeft", "TrackRight", "SensorGimbal"],
+    supportLodHiddenNodes: ["ProbeArm", "ProbeTip", "RTKAntenna", "SafetyBumper", "CameraLens_-0.14", "CameraLens_0.14", "Lidar", "SensorMast"],
     chapter: "coordinated-patrol",
     position: [78, 0.58, -19],
     rotationY: -0.78,

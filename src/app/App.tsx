@@ -11,9 +11,14 @@ import { PresenterControls } from "../ui/PresenterControls";
 import { RemoteConfirmationCard } from "../ui/RemoteConfirmationCard";
 import { TimeCutCard } from "../ui/TimeCutCard";
 import { TopBar } from "../ui/TopBar";
-import { useDemoSequence } from "../hooks/useDemoSequence";
+import { readDemoSequenceAudit, useDemoSequence } from "../hooks/useDemoSequence";
 import { useFarmStore } from "../state/useFarmStore";
+import type { SmartFarmChapter } from "../state/smartFarmState";
 import { shouldAutoReplay } from "./autoReplay";
+import { compareQaRuns, createQaRunResult, type QaRunResult } from "./qaReplay";
+import { selectActiveMachineIds } from "../scene/autonomousMachineMotion";
+import { detectTier } from "../hooks/usePerformanceTier";
+import { readQaSceneMetrics } from "../scene/qaSceneMetrics";
 
 function AutoDemo() {
   const introComplete = useFarmStore((state) => state.introComplete);
@@ -21,9 +26,72 @@ function AutoDemo() {
   const { play } = useDemoSequence();
   useEffect(() => {
     if (!introComplete || started.current) return;
+    const params = new URLSearchParams(window.location.search);
     // QA harness: ?qa=1 disables autoplay so screenshot scripts can drive state directly.
-    if (new URLSearchParams(window.location.search).has("qa")) return;
+    if (params.has("qa")) return;
     started.current = true;
+    const qaRun = params.get("qaRun");
+    if (qaRun === "fast" || qaRun === "narration") {
+      const runs = Math.min(3, Math.max(1, Number(params.get("qaRuns")) || 1));
+      const pacing = qaRun === "narration" ? "narration" : "fast";
+      useFarmStore.getState().setPacing(pacing);
+      document.title = `FieldVision QA RUNNING · ${pacing} ×${runs}`;
+      const timer = window.setTimeout(() => {
+        void (async () => {
+          const results: QaRunResult[] = [];
+          for (let index = 0; index < runs; index += 1) {
+            const chapters: SmartFarmChapter[] = ["base-online"];
+            // Every play() resets to base-online. Seed the observer with that
+            // canonical first chapter so subsequent runs do not record it twice.
+            let previous: SmartFarmChapter = "base-online";
+            const unsubscribe = useFarmStore.subscribe((state) => {
+              if (state.smartFarmChapter !== previous) {
+                chapters.push(state.smartFarmChapter);
+                previous = state.smartFarmChapter;
+              }
+            });
+            const auditBefore = readDemoSequenceAudit();
+            await play({ confirmationMode: "simulated" });
+            unsubscribe();
+            let postRunMutationCount = 0;
+            const unsubscribeQuarantine = useFarmStore.subscribe(() => { postRunMutationCount += 1; });
+            // Let the renderer finish chapter teardown before taking the
+            // resource baseline. Store writes remain monitored throughout,
+            // so this settling window cannot hide a stale controller update.
+            await new Promise((resolve) => window.setTimeout(resolve, 500));
+            const scene = readQaSceneMetrics();
+            await new Promise((resolve) => window.setTimeout(resolve, 500));
+            unsubscribeQuarantine();
+            const postRunScene = readQaSceneMetrics();
+            const sequenceAudit = readDemoSequenceAudit();
+            const state = useFarmStore.getState();
+            results.push(createQaRunResult({
+              chapters,
+              finalChapter: state.smartFarmChapter,
+              waterStatus: state.tasks["IRRIGATE-A02"]?.status ?? "missing",
+              fieldStatus: state.fieldStatuses.A02 ?? "missing",
+              taskCount: Object.keys(state.tasks).length,
+              activeMachineCount: selectActiveMachineIds(state.smartFarmChapter, detectTier()).length,
+              demoPlaying: state.demoPlaying,
+              scene,
+              postRunScene,
+              postRunMutationCount,
+              lateWriteAttempts: sequenceAudit.lateWriteAttempts - auditBefore.lateWriteAttempts,
+            }));
+          }
+          const audit = compareQaRuns(results, runs);
+          (window as unknown as { __qaReport?: { audit: typeof audit; results: QaRunResult[] } }).__qaReport = { audit, results };
+          const state = useFarmStore.getState();
+          const water = state.tasks["IRRIGATE-A02"];
+          const failureDetail = results.map((result) =>
+            `${result.scene.objects}/${result.scene.meshes}/${result.scene.geometries}`
+            + `>${result.postRunScene.objects}/${result.postRunScene.meshes}/${result.postRunScene.geometries}`,
+          ).join(",");
+          document.title = `FieldVision QA ${audit.passed ? "PASS" : "FAIL"} · ${pacing} ×${runs} · ${state.smartFarmChapter} · ${audit.passed ? (water?.status ?? audit.reason) : `${audit.reason} ${failureDetail}`}`;
+        })();
+      }, 1_200);
+      return () => window.clearTimeout(timer);
+    }
     let completedAt: number | null = null;
     let lastActivityAt = performance.now();
     let wasPlaying = useFarmStore.getState().demoPlaying;

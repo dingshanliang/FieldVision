@@ -19,6 +19,12 @@ import {
 import { visualConfig } from "../config/visual";
 import { droneWorldPosition } from "./dronePosition";
 import { useFarmStore } from "../state/useFarmStore";
+import { droneDockingState } from "./droneDockingState";
+import {
+  DRONE_DOCK_WORLD_POSITION,
+  droneFlightTelemetry,
+  type DroneFlightPhase,
+} from "./droneFlightTelemetry";
 
 const rotorNames = ["Rotor_FL", "Rotor_FR", "Rotor_RL", "Rotor_RR"];
 const ROTOR_RADIUS = 1.78;
@@ -97,6 +103,8 @@ export function Drone() {
   const smartFarmChapter = useFarmStore((state) => state.smartFarmChapter);
   const scanProgress = useFarmStore((state) => state.scanProgress);
   const following = useFarmStore((state) => state.droneFollowing);
+  const demoPlaying = useFarmStore((state) => state.demoPlaying);
+  const paused = useFarmStore((state) => state.paused);
   const setFollowing = useFarmStore((state) => state.setDroneFollowing);
   const { scene } = useGLTF("/assets/models/fieldvision-drone.glb");
   const model = useMemo(() => {
@@ -156,27 +164,78 @@ export function Drone() {
   // Cruise progress along the patrol path — advanced with curvature-based
   // speed so the drone slows into turns and stretches out on straights.
   const pathT = useRef(0.15);
+  const chapterElapsed = useRef(0);
+  const previousChapter = useRef(smartFarmChapter);
+  const returnStart = useRef(DRONE_DOCK_WORLD_POSITION.clone());
+  const qaTelemetryEnabled = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.has("qa") || params.has("qaRun");
+  }, []);
 
   useFrame(({ clock }, delta) => {
     if (!group.current) return;
+    if (paused) return;
     const time = clock.elapsedTime;
     const scanning = demoStep === "drone-scan";
-    const docked = smartFarmChapter === "base-online" || smartFarmChapter === "daily-plan" || smartFarmChapter === "autonomous-operations";
-    const returning = smartFarmChapter === "return-overview";
+    if (previousChapter.current !== smartFarmChapter) {
+      chapterElapsed.current = 0;
+      if (smartFarmChapter === "coordinated-patrol") pathT.current = 0;
+      if (smartFarmChapter === "return-overview") returnStart.current.copy(group.current.position);
+      previousChapter.current = smartFarmChapter;
+    }
+    if (demoPlaying && !paused) chapterElapsed.current += delta;
+    const completedReturn = smartFarmChapter === "return-overview" && !demoPlaying;
+    const docked = smartFarmChapter === "base-online" || smartFarmChapter === "daily-plan" || smartFarmChapter === "autonomous-operations" || completedReturn;
+    const takeoffSequence = smartFarmChapter === "coordinated-patrol" && demoPlaying && chapterElapsed.current < 5;
+    const returning = smartFarmChapter === "return-overview" && demoPlaying;
+    let phase: DroneFlightPhase = "airborne";
     let yaw: number;
     let pitch: number;
     let roll: number;
     if (docked) {
-      scratch.targetPosition.set(-103, 3.35, 111);
+      scratch.targetPosition.copy(DRONE_DOCK_WORLD_POSITION);
       group.current.position.lerp(scratch.targetPosition, Math.min(1, delta * 2.4));
+      phase = completedReturn ? "charging" : "ready";
       yaw = -0.35;
       pitch = 0;
       roll = 0;
+    } else if (takeoffSequence) {
+      const elapsed = chapterElapsed.current;
+      const selfChecking = elapsed < 1.2;
+      const takeoffProgress = Math.max(0, Math.min(1, (elapsed - 1.2) / 3.8));
+      const liftProgress = Math.min(1, takeoffProgress / 0.42);
+      const transferProgress = Math.max(0, (takeoffProgress - 0.42) / 0.58);
+      scratch.ahead.set(
+        DRONE_DOCK_WORLD_POSITION.x,
+        DRONE_DOCK_WORLD_POSITION.y + 11,
+        DRONE_DOCK_WORLD_POSITION.z,
+      );
+      const routeEntry = curve.getPointAt(0, scratch.further);
+      scratch.targetPosition.copy(DRONE_DOCK_WORLD_POSITION).lerp(scratch.ahead, liftProgress);
+      if (transferProgress > 0) scratch.targetPosition.lerp(routeEntry, transferProgress * transferProgress * (3 - 2 * transferProgress));
+      group.current.position.lerp(scratch.targetPosition, Math.min(1, delta * 5));
+      phase = selfChecking ? "self-check" : "taking-off";
+      yaw = -0.35;
+      pitch = takeoffProgress > 0.45 ? 0.08 : 0;
+      roll = 0;
     } else if (returning) {
-      scratch.targetPosition.set(-103, 3.35, 111);
-      group.current.position.lerp(scratch.targetPosition, Math.min(1, delta * 0.58));
-      yaw = Math.atan2(scratch.targetPosition.x - group.current.position.x, scratch.targetPosition.z - group.current.position.z);
-      pitch = 0.05;
+      const progress = Math.min(1, chapterElapsed.current / 7);
+      const eased = progress * progress * (3 - 2 * progress);
+      scratch.ahead.set(
+        DRONE_DOCK_WORLD_POSITION.x,
+        DRONE_DOCK_WORLD_POSITION.y + 7,
+        DRONE_DOCK_WORLD_POSITION.z,
+      );
+      if (eased < 0.72) {
+        scratch.targetPosition.copy(returnStart.current).lerp(scratch.ahead, eased / 0.72);
+      } else {
+        scratch.targetPosition.copy(scratch.ahead).lerp(DRONE_DOCK_WORLD_POSITION, (eased - 0.72) / 0.28);
+      }
+      group.current.position.copy(scratch.targetPosition);
+      const distanceToDock = group.current.position.distanceTo(DRONE_DOCK_WORLD_POSITION);
+      phase = progress >= 1 ? "charging" : distanceToDock < 5.5 ? "landing" : "returning";
+      yaw = Math.atan2(DRONE_DOCK_WORLD_POSITION.x - group.current.position.x, DRONE_DOCK_WORLD_POSITION.z - group.current.position.z);
+      pitch = phase === "landing" ? -0.04 : 0.05;
       roll = 0;
     } else if (scanning) {
       // A real acquisition pass crosses the parcel; direct timeline jumps use
@@ -196,6 +255,7 @@ export function Drone() {
       const ahead = curve.getPointAt((t + 0.012) % 1, scratch.ahead);
       const further = curve.getPointAt((t + 0.035) % 1, scratch.further);
       group.current.position.copy(point);
+      phase = "airborne";
       // Heading now vs. slightly ahead → bank (roll) into the turn.
       const headingNow = Math.atan2(ahead.x - point.x, ahead.z - point.z);
       const headingNext = Math.atan2(further.x - ahead.x, further.z - ahead.z);
@@ -213,14 +273,26 @@ export function Drone() {
     // Publish the live world position so the camera follow shot (drone-scan
     // beat) can track the drone without going through the store each frame.
     droneWorldPosition.copy(group.current.position);
+    droneFlightTelemetry.position.copy(group.current.position);
+    droneFlightTelemetry.distanceToDock = group.current.position.distanceTo(DRONE_DOCK_WORLD_POSITION);
+    droneFlightTelemetry.phase = phase;
+    if (qaTelemetryEnabled) {
+      (window as unknown as { __droneTelemetry?: unknown }).__droneTelemetry = {
+        phase: droneFlightTelemetry.phase,
+        position: droneFlightTelemetry.position.toArray(),
+        dock: DRONE_DOCK_WORLD_POSITION.toArray(),
+        distanceToDock: droneFlightTelemetry.distanceToDock,
+      };
+    }
     scratch.targetEuler.set(pitch, yaw, roll);
     scratch.targetQuaternion.setFromEuler(scratch.targetEuler);
     group.current.quaternion.slerp(scratch.targetQuaternion, Math.min(1, delta * (scanning ? 2.2 : 4.5)));
 
+    const dockState = droneDockingState(droneFlightTelemetry.phase);
     rotorNames.forEach((name, index) => {
       const rotor = model.getObjectByName(name);
       // GLB is Y-up: the prop spin axis is the local +Y of each rotor mesh.
-      if (rotor) rotor.rotation.y += delta * (index % 2 ? -ROTOR_SPEED : ROTOR_SPEED) * (docked ? 0.08 : 1);
+      if (rotor) rotor.rotation.y += delta * (index % 2 ? -ROTOR_SPEED : ROTOR_SPEED) * dockState.rotorScale;
     });
     const material = scanMesh.current?.material as ShaderMaterial | undefined;
     const uTime = material?.uniforms.uTime as { value: number } | undefined;
@@ -232,7 +304,7 @@ export function Drone() {
 
   const scanning = demoStep === "drone-scan";
   return (
-    <group ref={group} onClick={(event) => { event.stopPropagation(); setFollowing(!following); }}>
+    <group ref={group} position={DRONE_DOCK_WORLD_POSITION} onClick={(event) => { event.stopPropagation(); setFollowing(!following); }}>
       <primitive object={model} scale={0.92} rotation={[0, Math.PI, 0]} />
       <pointLight position={[0, -0.7, 0]} color="#6ce5d8" intensity={8} distance={11} />
       <mesh position={[0, -9.3, 0]} visible={scanning}>

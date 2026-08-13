@@ -1,6 +1,6 @@
 import { Html, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Group, MathUtils, Mesh } from "three";
 import {
   SMART_MACHINE_ASSETS,
@@ -16,6 +16,7 @@ import {
   evaluateMachineMotion,
   selectActiveMachineIds,
 } from "./autonomousMachineMotion";
+import { bakeMachineLod } from "./createMachineLod";
 
 const TASK_BY_MACHINE: Record<SmartMachineId, string> = {
   "tractor-seeder": "SOW-B03",
@@ -38,10 +39,12 @@ const WHEEL_NAMES: Record<SmartMachineId, readonly string[]> = {
 function manualProgress(chapter: keyof typeof CHAPTER_DURATION_SECONDS) {
   if (chapter === "coordinated-patrol") return 0.82;
   if (chapter === "return-overview") return 1;
-  return 0.72;
+  // Direct chapter jumps should frame the tractor near the declared B03
+  // hero target, just after it lowers the implement onto the first strip.
+  return 0.58;
 }
 
-function SmartMachine({ asset }: { asset: SmartMachineAsset }) {
+function SmartMachine({ asset, isHero, lowTierHero }: { asset: SmartMachineAsset; isHero: boolean; lowTierHero: boolean }) {
   const group = useRef<Group>(null);
   const progress = useRef(0);
   const previousChapter = useRef(useFarmStore.getState().smartFarmChapter);
@@ -51,20 +54,40 @@ function SmartMachine({ asset }: { asset: SmartMachineAsset }) {
   const paused = useFarmStore((state) => state.paused);
   const task = useFarmStore((state) => state.tasks[TASK_BY_MACHINE[asset.id]]);
   const { scene } = useGLTF(asset.url);
+  const qaTelemetryEnabled = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.has("qa") || params.has("qaRun");
+  }, []);
   const model = useMemo(() => {
     const clone = scene.clone(true);
     clone.traverse((object) => {
       if (object instanceof Mesh) {
-        object.castShadow = true;
+        object.castShadow = isHero;
         object.receiveShadow = true;
       }
     });
+    if (!isHero) {
+      for (const nodeName of asset.supportLodHiddenNodes) {
+        const detail = clone.getObjectByName(nodeName);
+        if (detail) detail.visible = false;
+      }
+      bakeMachineLod(clone);
+    } else if (lowTierHero) {
+      bakeMachineLod(clone, [...WHEEL_NAMES[asset.id], "SeederLift", "SensorGimbal", "MowerBlade"]);
+    }
     return clone;
-  }, [scene]);
+  }, [asset.id, asset.supportLodHiddenNodes, isHero, lowTierHero, scene]);
+
+  useEffect(() => () => {
+    model.traverse((object) => {
+      if (object instanceof Mesh && object.name === "RuntimeAuthoredLod") object.geometry.dispose();
+    });
+  }, [model]);
 
   useFrame(({ clock }, delta) => {
     const target = group.current;
     if (!target) return;
+    if (paused) return;
     const motionChapter = chapter === "autonomous-operations" || chapter === "coordinated-patrol" || chapter === "return-overview"
       ? chapter
       : "daily-plan";
@@ -92,6 +115,20 @@ function SmartMachine({ asset }: { asset: SmartMachineAsset }) {
     if (seederLift) seederLift.rotation.x = MathUtils.lerp(seederLift.rotation.x, motion.implementDown ? 0 : -0.28, Math.min(1, delta * 5));
     if (gimbal) gimbal.rotation.y = Math.sin(clock.elapsedTime * 0.8) * 0.62;
     if (mowerBlade && motion.speedScale > 0) mowerBlade.rotation.z += delta * 18;
+    if (qaTelemetryEnabled) {
+      const qaWindow = window as unknown as {
+        __machineTelemetry?: Record<string, { position: number[]; rotationY: number; movingPartRotation: number[] }>;
+      };
+      qaWindow.__machineTelemetry ??= {};
+      const movingPart = seederLift ?? gimbal ?? mowerBlade ?? model.getObjectByName(WHEEL_NAMES[asset.id][0] ?? "");
+      qaWindow.__machineTelemetry[asset.id] = {
+        position: target.position.toArray(),
+        rotationY: target.rotation.y,
+        movingPartRotation: movingPart
+          ? [movingPart.rotation.x, movingPart.rotation.y, movingPart.rotation.z]
+          : [0, 0, 0],
+      };
+    }
   });
 
   const exception = task?.exception;
@@ -123,9 +160,9 @@ export function SmartMachineAssets() {
 
   return (
     <group>
-      {assets.map((asset) => (
+      {assets.map((asset, index) => (
         <SceneErrorBoundary key={asset.id} name={asset.label}>
-          <SmartMachine asset={asset} />
+          <SmartMachine asset={asset} isHero={index === 0} lowTierHero={tier === "low" && index === 0} />
         </SceneErrorBoundary>
       ))}
     </group>

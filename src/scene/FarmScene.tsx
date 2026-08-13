@@ -19,6 +19,8 @@ import { WorldLod } from "./WorldLod";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { PerfProbe } from "./PerfInstrumentation";
 import { perfEnabled } from "./perfStats";
+import { QaSceneProbe } from "./QaSceneProbe";
+import { qaSceneProbeEnabled } from "./qaSceneMetrics";
 
 const ScenePostProcessing = lazy(() =>
   import("./ScenePostProcessing").then(({ ScenePostProcessing: component }) => ({ default: component })),
@@ -28,6 +30,7 @@ export function FarmScene() {
   const tier = usePerformanceTier();
   const applyDemoState = useFarmStore((state) => state.applyDemoState);
   const perf = perfEnabled();
+  const qaProbe = qaSceneProbeEnabled();
   const [postProcessingReady, setPostProcessingReady] = useState(false);
 
   useEffect(() => {
@@ -59,6 +62,7 @@ export function FarmScene() {
       </group>
       <CameraDirector />
       {perf && <PerfProbe />}
+      {qaProbe && <QaSceneProbe />}
       {tier !== "low" && postProcessingReady ? (
         <Suspense fallback={null}>
           <ScenePostProcessing />

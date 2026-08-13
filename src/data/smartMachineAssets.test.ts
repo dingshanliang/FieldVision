@@ -18,6 +18,9 @@ describe("smart machine asset contract", () => {
       for (const nodeName of asset.requiredNodes) {
         expect(file.includes(Buffer.from(nodeName)), `${asset.id}:${nodeName}`).toBe(true);
       }
+      for (const nodeName of asset.supportLodHiddenNodes) {
+        expect(file.includes(Buffer.from(nodeName)), `${asset.id}:support-lod:${nodeName}`).toBe(true);
+      }
       totalBytes += bytes;
     }
 

@@ -6,16 +6,50 @@ import { useFarmStore } from "../state/useFarmStore";
 function wait(milliseconds: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     let remaining = milliseconds;
+    let lastTick = performance.now();
     const id = window.setInterval(() => {
       if (signal.aborted) { window.clearInterval(id); reject(new DOMException("Aborted", "AbortError")); return; }
-      if (!useFarmStore.getState().paused) remaining -= 100;
+      const now = performance.now();
+      const elapsed = now - lastTick;
+      lastTick = now;
+      if (!useFarmStore.getState().paused) remaining -= elapsed;
       if (remaining <= 0) { window.clearInterval(id); resolve(); }
     }, 100);
     signal.addEventListener("abort", () => { window.clearInterval(id); reject(new DOMException("Aborted", "AbortError")); }, { once: true });
   });
 }
 
+function waitForPresenterConfirmation(signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const unsubscribe = useFarmStore.subscribe((state) => {
+      if (state.tasks["IRRIGATE-A02"]?.status !== "awaiting-confirmation") {
+        unsubscribe();
+        resolve();
+      }
+    });
+    signal.addEventListener("abort", () => {
+      unsubscribe();
+      reject(new DOMException("Aborted", "AbortError"));
+    }, { once: true });
+  });
+}
+
 let activeController: AbortController | null = null;
+let sequenceGeneration = 0;
+let lateWriteAttempts = 0;
+
+export function readDemoSequenceAudit() {
+  return { generation: sequenceGeneration, lateWriteAttempts } as const;
+}
+
+function commitIfActive(controller: AbortController, action: () => void) {
+  if (activeController !== controller || controller.signal.aborted) {
+    lateWriteAttempts += 1;
+    return false;
+  }
+  action();
+  return true;
+}
 
 export function useDemoSequence() {
   const store = useFarmStore;
@@ -43,10 +77,11 @@ export function useDemoSequence() {
     s.setPaused(false);
   }, [store]);
 
-  const play = useCallback(async () => {
+  const play = useCallback(async (options?: { confirmationMode?: "simulated" | "presenter" }) => {
     activeController?.abort();
     const controller = new AbortController();
     activeController = controller;
+    sequenceGeneration += 1;
     const state = store.getState();
     const plan = createSmartFarmSequencePlan(state.pacing);
     state.resetDemo();
@@ -54,21 +89,24 @@ export function useDemoSequence() {
     state.setPaused(false);
     try {
       for (const chapter of plan) {
-        store.getState().applySmartFarmChapter(chapter.id);
+        if (!commitIfActive(controller, () => store.getState().applySmartFarmChapter(chapter.id))) break;
         let elapsed = 0;
 
-        if (chapter.simulatedConfirmationDelayMs) {
+        if (chapter.simulatedConfirmationDelayMs && (options?.confirmationMode ?? (state.pacing === "narration" ? "presenter" : "simulated")) === "presenter") {
+          commitIfActive(controller, () => store.getState().setConfirmationCountdown(null));
+          await waitForPresenterConfirmation(controller.signal);
+        } else if (chapter.simulatedConfirmationDelayMs) {
           const countdownSeconds = Math.ceil(chapter.simulatedConfirmationDelayMs / 1_000);
-          store.getState().setConfirmationCountdown(countdownSeconds);
+          commitIfActive(controller, () => store.getState().setConfirmationCountdown(countdownSeconds));
           for (let remaining = countdownSeconds; remaining > 0; remaining -= 1) {
             await wait(1_000, controller.signal);
             elapsed += 1_000;
             const task = store.getState().tasks["IRRIGATE-A02"];
             if (task?.status !== "awaiting-confirmation") break;
-            store.getState().setConfirmationCountdown(remaining - 1);
+            commitIfActive(controller, () => store.getState().setConfirmationCountdown(remaining - 1));
           }
           if (store.getState().tasks["IRRIGATE-A02"]?.status === "awaiting-confirmation") {
-            store.getState().confirmTaskForDemo("IRRIGATE-A02", "simulated-autoplay");
+            commitIfActive(controller, () => store.getState().confirmTaskForDemo("IRRIGATE-A02", "simulated-autoplay"));
           }
         }
 
@@ -78,22 +116,28 @@ export function useDemoSequence() {
             await wait(chapter.durationMs / slices, controller.signal);
             elapsed += chapter.durationMs / slices;
             const progress = 0.62 + (1 - 0.62) * (index / slices);
-            store.getState().setIrrigationProgress(progress);
-            store.getState().advanceTaskProgress("IRRIGATE-A02", progress);
+            commitIfActive(controller, () => {
+              store.getState().setIrrigationProgress(progress);
+              store.getState().advanceTaskProgress("IRRIGATE-A02", progress);
+            });
           }
-          store.getState().setRecoveryPhase("arrived");
-          store.getState().setFieldStatus("A02", "processing");
+          commitIfActive(controller, () => {
+            store.getState().setRecoveryPhase("arrived");
+            store.getState().setFieldStatus("A02", "processing");
+          });
         }
 
         if (chapter.id === "outcome-verification") {
-          store.getState().setRecoveryPhase("arrived");
-          store.getState().setFieldStatus("A02", "processing");
+          commitIfActive(controller, () => {
+            store.getState().setRecoveryPhase("arrived");
+            store.getState().setFieldStatus("A02", "processing");
+          });
           for (const phase of ["d1-root", "d3-reflight", "resolved"] as const) {
             await wait(chapter.durationMs / 3, controller.signal);
             elapsed += chapter.durationMs / 3;
-            store.getState().setRecoveryPhase(phase);
+            commitIfActive(controller, () => store.getState().setRecoveryPhase(phase));
           }
-          store.getState().setFieldStatus("A02", "recovered");
+          commitIfActive(controller, () => store.getState().setFieldStatus("A02", "recovered"));
         }
 
         await wait(Math.max(0, chapter.durationMs - elapsed), controller.signal);

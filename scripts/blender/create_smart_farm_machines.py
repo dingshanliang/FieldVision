@@ -105,6 +105,22 @@ def apply_and_export(filename):
         bpy.context.view_layer.objects.active = obj
         for modifier in list(obj.modifiers):
             bpy.ops.object.modifier_apply(modifier=modifier.name)
+    # Repeated wheels, hubs and six row-unit parts keep separate named objects
+    # for runtime animation, but share identical mesh data in the GLB. This
+    # lowers browser geometry uploads without flattening the activity nodes.
+    shared_meshes = {}
+    for obj in [item for item in bpy.context.selected_objects if item.type == "MESH"]:
+        mesh = obj.data
+        signature = (
+            tuple(material.name if material else "" for material in mesh.materials),
+            tuple((round(vertex.co.x, 5), round(vertex.co.y, 5), round(vertex.co.z, 5)) for vertex in mesh.vertices),
+            tuple(tuple(polygon.vertices) for polygon in mesh.polygons),
+        )
+        existing = shared_meshes.get(signature)
+        if existing is None:
+            shared_meshes[signature] = mesh
+        else:
+            obj.data = existing
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / filename
     bpy.ops.export_scene.gltf(

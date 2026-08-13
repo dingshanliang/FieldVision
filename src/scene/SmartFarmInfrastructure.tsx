@@ -1,6 +1,6 @@
 import { Html, Line, RoundedBox } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { Group } from "three";
 import { BoxGeometry, Color, CylinderGeometry, Matrix4, Quaternion, Vector3 } from "three";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
@@ -10,9 +10,16 @@ import {
   spatialDetailLevel,
   type SupportNodeKind,
 } from "../data/smartFarmInfrastructure";
+import { droneDockingState } from "./droneDockingState";
+import {
+  DRONE_DOCK_LOCAL_POSITION,
+  SMART_YARD_POSITION,
+  SMART_YARD_ROTATION_Y,
+  droneFlightTelemetry,
+  type DroneFlightPhase,
+} from "./droneFlightTelemetry";
 import { useFarmStore } from "../state/useFarmStore";
 
-const YARD_POSITION: [number, number, number] = [-122, 1.4, 112];
 const NODE_COLOR: Record<SupportNodeKind, string> = {
   "crop-camera": "#7bc8e8",
   "soil-box": "#d2b46e",
@@ -30,11 +37,12 @@ const ROTATION = new Quaternion();
 
 function DroneDockLid() {
   const lid = useRef<Group>(null);
-  const chapter = useFarmStore((state) => state.smartFarmChapter);
-  const open = chapter === "coordinated-patrol" || chapter === "a02-alert" || chapter === "outcome-verification" || chapter === "return-overview";
+  const paused = useFarmStore((state) => state.paused);
   useFrame((_, delta) => {
     if (!lid.current) return;
-    lid.current.rotation.z += ((open ? -0.92 : -0.08) - lid.current.rotation.z) * Math.min(1, delta * 3.5);
+    if (paused) return;
+    const dockState = droneDockingState(droneFlightTelemetry.phase);
+    lid.current.rotation.z += ((dockState.lidOpen ? -0.92 : -0.08) - lid.current.rotation.z) * Math.min(1, delta * 3.5);
   });
   return (
     <group ref={lid} position={[-2.55, 0.55, 0]}>
@@ -46,15 +54,39 @@ function DroneDockLid() {
   );
 }
 
+const DOCK_STATUS_LABEL: Record<DroneFlightPhase, string> = {
+  ready: "机库待命",
+  "self-check": "开盖自检",
+  "taking-off": "起飞爬升",
+  airborne: "任务执行中",
+  returning: "返航进近",
+  landing: "垂直降落",
+  charging: "已降落 · 充电中",
+};
+
+function DroneDockStatusLabel() {
+  const [phase, setPhase] = useState<DroneFlightPhase>(droneFlightTelemetry.phase);
+  const paused = useFarmStore((state) => state.paused);
+  useFrame(() => {
+    if (paused) return;
+    if (droneFlightTelemetry.phase !== phase) setPhase(droneFlightTelemetry.phase);
+  });
+  return (
+    <Html position={[19, 4.2, 6]} center distanceFactor={56} zIndexRange={[25, 4]}>
+      <div className="facility-tag"><i className="is-online" />UAV-01 · {DOCK_STATUS_LABEL[phase]}</div>
+    </Html>
+  );
+}
+
 function SmartOperationsYard() {
   return (
-    <group position={YARD_POSITION} rotation={[0, -0.35, 0]}>
+    <group position={SMART_YARD_POSITION} rotation={[0, SMART_YARD_ROTATION_Y, 0]}>
       <mesh position={[12, 0.02, 1]} receiveShadow>
         <boxGeometry args={[24, 0.18, 20]} />
         <meshStandardMaterial color="#77766f" roughness={0.94} />
       </mesh>
       {/* 自动无人机机库，低矮盒体 + 可辨识舱盖。 */}
-      <group position={[19, 0.45, 6]}>
+      <group position={DRONE_DOCK_LOCAL_POSITION}>
         <RoundedBox args={[5.8, 0.9, 4.6]} radius={0.28} smoothness={3} castShadow receiveShadow>
           <meshStandardMaterial color="#c8ccc5" metalness={0.35} roughness={0.5} />
         </RoundedBox>
@@ -92,6 +124,7 @@ function SmartOperationsYard() {
       <Html position={[8, 9.8, 0]} center distanceFactor={94} zIndexRange={[25, 4]}>
         <div className="facility-tag"><i className="is-online" />智慧作业场 · 设备归属与回库</div>
       </Html>
+      <DroneDockStatusLabel />
     </group>
   );
 }

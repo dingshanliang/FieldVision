@@ -2,8 +2,9 @@
 
 > Source: `docs/prd/supervised-autonomous-smart-farm.md`
 > Generated: 2026-08-12
-> Status: NOT RUN
+> Status: COMPLETE — AC-01…AC-24 passed in the final production acceptance matrix
 > Evidence authority: production build + real desktop browser + focused automated checks
+> Detailed record: `docs/research/fieldvision-smart-farm/final-acceptance-record.md`
 
 ## User Story 1：观众理解同一清晨的智慧农场任务
 
@@ -285,4 +286,6 @@
 
 | AC | Status | Automated evidence | Browser evidence | Notes |
 |---|---|---|---|---|
-| AC-01…AC-24 | NOT RUN | — | — | 实现完成后逐项填写 |
+| AC-01…AC-22 | PASS | 80 tests；typecheck/lint/build；双节奏及三次重播自检 | Chrome 多尺寸、多档、关键章节截图与性能采样 | 详见最终验收记录 |
+| AC-23 | PASS | Chrome 矩阵与严格三次资源审计通过 | Safari production 90 秒快览完整到 `return-overview · verified` | Safari 单次路径为跨浏览器业务冒烟，资源累计以 Chrome 三次审计为准 |
+| AC-24 | PASS | reduced-motion 与控制角色验证 | Chrome 键盘入口和可读名称可用 | 详见最终验收记录 |
