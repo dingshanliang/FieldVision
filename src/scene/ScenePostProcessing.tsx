@@ -3,6 +3,7 @@ import { BlendFunction, ToneMappingMode } from "postprocessing";
 import { Vector2 } from "three";
 import { visualConfig } from "../config/visual";
 import { useFarmStore } from "../state/useFarmStore";
+import { povCutEngaged } from "./dronePov";
 
 /** Cinematic shallow focus for the close-up beats; wide shots stay fully sharp. */
 function dofPreset(viewMode: string, demoStep: string) {
@@ -28,7 +29,10 @@ const chromaticOffset = new Vector2(0.00065, 0.00035);
 export function ScenePostProcessing() {
   const viewMode = useFarmStore((state) => state.viewMode);
   const demoStep = useFarmStore((state) => state.demoStep);
-  const dof = dofPreset(viewMode, demoStep);
+  const scanProgress = useFarmStore((state) => state.scanProgress);
+  // Gimbal first-person cut: FPV 窗口内关掉 DOF——无人机回传是深焦画面，
+  // 沿用第三人称跟拍的 focus 76 会把 20m 外的地面糊掉。
+  const dof = demoStep === "drone-scan" && povCutEngaged(scanProgress) ? null : dofPreset(viewMode, demoStep);
   const ao = aoEnabled();
   const effects = [
     ...(ao

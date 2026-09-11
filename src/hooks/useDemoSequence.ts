@@ -110,6 +110,21 @@ export function useDemoSequence() {
           }
         }
 
+        if (chapter.id === "a02-alert") {
+          // 扫描进度在章节内从 0 推进到 1：无人机真正飞完采集航带，证据随
+          // 扫描逐渐显现（任务书 §13.3 扫描节拍）；云台 FPV 切入窗口
+          // （fv-66y.6，scanProgress 0.38–0.70）也在此期间自然经过。
+          // 章节快照把 scanProgress 置 1（供直接跳转），播放时先归零再爬坡。
+          const slices = 8;
+          commitIfActive(controller, () => store.getState().setScanProgress(0));
+          for (let index = 1; index <= slices; index += 1) {
+            await wait(chapter.durationMs / slices, controller.signal);
+            elapsed += chapter.durationMs / slices;
+            const progress = index / slices;
+            commitIfActive(controller, () => store.getState().setScanProgress(progress));
+          }
+        }
+
         if (chapter.id === "irrigation-response") {
           const slices = 6;
           for (let index = 1; index <= slices; index += 1) {

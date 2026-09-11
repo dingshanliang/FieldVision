@@ -12,12 +12,14 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  PointLight,
   Quaternion,
   ShaderMaterial,
   Vector3,
 } from "three";
 import { visualConfig } from "../config/visual";
 import { droneWorldPosition } from "./dronePosition";
+import { povCutEngaged } from "./dronePov";
 import { useFarmStore } from "../state/useFarmStore";
 import { droneDockingState } from "./droneDockingState";
 import {
@@ -99,6 +101,9 @@ function makeRotorBlurTexture() {
 export function Drone() {
   const group = useRef<Group>(null);
   const scanMesh = useRef<Mesh>(null);
+  const bellyLight = useRef<PointLight>(null);
+  const modelRef = useRef<Group>(null);
+  const scanCone = useRef<Mesh>(null);
   const demoStep = useFarmStore((state) => state.demoStep);
   const smartFarmChapter = useFarmStore((state) => state.smartFarmChapter);
   const scanProgress = useFarmStore((state) => state.scanProgress);
@@ -177,6 +182,15 @@ export function Drone() {
     if (paused) return;
     const time = clock.elapsedTime;
     const scanning = demoStep === "drone-scan";
+    // Gimbal first-person cut (fv-66y.6): 镜头切入云台期间隐藏机体与机载灯——
+    // 相机嵌在机腹，不隐藏会看到机身内壁和过曝光源；第三人称的扫描锥/地面
+    // 扫描盘同样只服务于外部视角，窗口内一并隐藏。
+    const fpvActive = scanning && povCutEngaged(scanProgress);
+    if (modelRef.current) modelRef.current.visible = !fpvActive;
+    if (bellyLight.current) bellyLight.current.visible = !fpvActive;
+    // FPV 时第三人称的扫描锥/地面扫描盘会糊满镜头，一并隐藏。
+    if (scanCone.current) scanCone.current.visible = scanning && !fpvActive;
+    if (scanMesh.current) scanMesh.current.visible = scanning && !fpvActive;
     if (previousChapter.current !== smartFarmChapter) {
       chapterElapsed.current = 0;
       if (smartFarmChapter === "coordinated-patrol") pathT.current = 0;
@@ -305,9 +319,9 @@ export function Drone() {
   const scanning = demoStep === "drone-scan";
   return (
     <group ref={group} position={DRONE_DOCK_WORLD_POSITION} onClick={(event) => { event.stopPropagation(); setFollowing(!following); }}>
-      <primitive object={model} scale={0.92} rotation={[0, Math.PI, 0]} />
-      <pointLight position={[0, -0.7, 0]} color="#6ce5d8" intensity={8} distance={11} />
-      <mesh position={[0, -9.3, 0]} visible={scanning}>
+      <primitive object={model} ref={modelRef} scale={0.92} rotation={[0, Math.PI, 0]} />
+      <pointLight ref={bellyLight} position={[0, -0.7, 0]} color="#6ce5d8" intensity={8} distance={11} />
+      <mesh ref={scanCone} position={[0, -9.3, 0]} visible={scanning}>
         <coneGeometry args={[7.5, 18, 40, 1, true]} />
         <meshBasicMaterial color="#65d9cb" transparent opacity={0.06} side={DoubleSide} depthWrite={false} />
       </mesh>

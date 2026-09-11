@@ -1,12 +1,13 @@
 import { CameraControls } from "@react-three/drei";
 import CameraControlsImpl from "camera-controls";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Raycaster, Vector2, Vector3 } from "three";
 import { fieldById } from "../data/fields";
 import { smartMachineCameraForChapter } from "../data/smartMachineAssets";
 import { useFarmStore } from "../state/useFarmStore";
 import { droneWorldPosition } from "./dronePosition";
+import { gimbalShot, povCutEngaged } from "./dronePov";
 
 const overview = { position: [210, 86, 223] as const, target: [-8, 2, -18] as const };
 const smartYardOverview = { position: [18, 52, 194] as const, target: [-94, 3, 104] as const };
@@ -19,12 +20,6 @@ const REDUCED_MOTION = typeof window !== "undefined"
 
 export function CameraDirector() {
   const controls = useRef<CameraControlsImpl>(null);
-  // Drone POV prototype (fv-66y.6): opt-in via ?pov=1 so the accepted follow
-  // shot is unchanged until the first-person cut is signed off.
-  const povEnabled = useMemo(
-    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("pov"),
-    [],
-  );
   const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);
   const selectedFieldId = useFarmStore((state) => state.selectedFieldId);
@@ -62,6 +57,9 @@ export function CameraDirector() {
   const followPos = useRef(new Vector3());
   const followTarget = useRef(new Vector3());
   const scratchFollow = useRef(new Vector3());
+  // PROTOTYPE: scratch vectors for the FPV gimbal shot (no per-frame allocation).
+  const povPos = useRef(new Vector3());
+  const povTarget = useRef(new Vector3());
 
   const TRANSITION_MAX_MS = 4_200;
   const BREATHING_RAMP_MS = 1_500;
@@ -215,7 +213,12 @@ export function CameraDirector() {
     if (!current) return;
     if (!useFarmStore.getState().introComplete) return;
     // QA screenshot scripts drive the camera directly — never fight them.
-    if (QA_MODE) return;
+    // Exception: explicit ?pov=cut lets QA screenshot the gimbal cut, and only
+    // while the drone-scan beat is actually live inside the POV window.
+    if (QA_MODE && !(
+      useFarmStore.getState().demoStep === "drone-scan"
+      && povCutEngaged(useFarmStore.getState().scanProgress)
+    )) return;
     // Drone-scan follow shot: ride behind/above the drone and look at it,
     // instead of the scripted breathing drift. The drone publishes its live
     // world position every frame (see Drone.tsx), so we just poll it here.
@@ -224,28 +227,30 @@ export function CameraDirector() {
     if (useFarmStore.getState().demoStep === "drone-scan") {
       const drone = droneWorldPosition;
       const scanProgress = useFarmStore.getState().scanProgress;
-      // Prototype first-person cut (fv-66y.6, ?pov=1): mid-scan, briefly look
-      // through the drone's gimbal — ahead + down along its survey line — so
-      // the dry patch comes into frame "as the drone sees it", then cut back to
-      // the third-person follow. Default off; the accepted follow shot is
-      // unchanged until the cut is signed off.
-      const POV_START = 0.42;
-      const POV_END = 0.66;
-      if (povEnabled && scanProgress >= POV_START && scanProgress <= POV_END) {
+      // Keep the third-person follow frame tracking even during the FPV
+      // window, so the hard cut back to it lands on a live, continuous shot.
+      scratchFollow.current.set(drone.x - 22, drone.y + 16, drone.z - 22);
+      followPos.current.lerp(scratchFollow.current, Math.min(1, delta * 2.5));
+      followTarget.current.lerp(drone, Math.min(1, delta * 4));
+      const shakeT = clock.elapsedTime;
+      // Gimbal first-person cut (fv-66y.6, signed off on the `cut` variant):
+      // mid-scan, hard-cut to the drone's belly camera so the dry patch comes
+      // into frame "as the drone sees it"; at the window edge, cut back to the
+      // handheld follow. The cut is deliberate edit language, and the gimbal
+      // shot itself stays stabilization-smooth — shake belongs to the
+      // third-person follow only (fv-66y.22).
+      if (povCutEngaged(scanProgress)) {
+        gimbalShot(drone, shakeT, povPos.current, povTarget.current);
         current.setLookAt(
-          drone.x, drone.y - 0.6, drone.z,
-          drone.x + 5.7, drone.y - 16, drone.z - 5.7,
+          povPos.current.x, povPos.current.y, povPos.current.z,
+          povTarget.current.x, povTarget.current.y, povTarget.current.z,
           false,
         );
         return;
       }
-      scratchFollow.current.set(drone.x - 22, drone.y + 16, drone.z - 22);
-      followPos.current.lerp(scratchFollow.current, Math.min(1, delta * 2.5));
-      followTarget.current.lerp(drone, Math.min(1, delta * 4));
       // fv-66y.22: 手持微震——完美的平滑跟随是"实拍"反指标。低幅度异频正弦
       // 叠加在 lerp 之后的最终相机位置上，读作操作员手持而非 bug。
       // delta-scaled 不需要：sin 是连续函数，幅度恒定。
-      const shakeT = clock.elapsedTime;
       const shakeX = Math.sin(shakeT * 1.7) * 0.08 + Math.sin(shakeT * 4.1 + 0.7) * 0.03;
       const shakeY = Math.sin(shakeT * 2.3 + 1.2) * 0.05 + Math.sin(shakeT * 3.3 + 2.1) * 0.02;
       current.setLookAt(

@@ -3,6 +3,7 @@ import { FarmCanvas } from "../scene/FarmCanvas";
 import { PerfHud } from "../scene/PerfInstrumentation";
 import { ChapterCaption } from "../ui/ChapterCaption";
 import { DemoPrecheck } from "../ui/DemoPrecheck";
+import { DronePovHud } from "../ui/DronePovHud";
 import { SoundToggle } from "../ui/SoundToggle";
 import { DemoTimeline } from "../ui/DemoTimeline";
 import { FieldDetailPanel } from "../ui/FieldDetailPanel";
@@ -146,6 +147,8 @@ export function App() {
     <main className={`app-shell${present ? " is-present" : ""}`}>
       <FarmCanvas />
       <AutoDemo />
+      {/* 云台 FPV 切入的画面 HUD（自门控：仅 drone-scan 的 POV 窗口内出现） */}
+      <DronePovHud />
       <div className={`letterbox${cinematic ? " is-active" : ""}`} aria-hidden="true" />
       {present ? null : (
         <>
