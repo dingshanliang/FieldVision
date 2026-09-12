@@ -1,9 +1,9 @@
-import { Html, RoundedBox } from "@react-three/drei";
+import { Html, Line, RoundedBox } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useKtx2 } from "./ktx2Loader";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { useMemo, useRef } from "react";
-import { ExtrudeGeometry, Group, MeshStandardMaterial, RepeatWrapping, Shape, SRGBColorSpace, Texture } from "three";
+import { BoxGeometry, ExtrudeGeometry, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, RepeatWrapping, Shape, SRGBColorSpace, Texture, Vector3 } from "three";
 import { useFarmStore } from "../state/useFarmStore";
 import { deriveIrrigationEvent } from "../state/irrigationEvent";
 
@@ -232,20 +232,93 @@ function WeatherStation() {
   });
   return (
     <group position={[-12, 0.9, 132]}>
+      {/* 设备基座 + 机箱 + 接地线缆 */}
+      <mesh position-y={0.1} receiveShadow>
+        <boxGeometry args={[1.4, 0.2, 1.4]} />
+        <meshStandardMaterial color="#7d7a6e" roughness={0.95} />
+      </mesh>
+      <mesh position={[0.42, 0.55, 0.3]} castShadow>
+        <boxGeometry args={[0.5, 0.7, 0.3]} />
+        <meshStandardMaterial color="#5c665f" metalness={0.35} roughness={0.55} />
+      </mesh>
       <mesh position-y={4.5} castShadow>
         <cylinderGeometry args={[0.09, 0.16, 9, 10]} />
         <meshStandardMaterial color="#b9c0ba" metalness={0.7} roughness={0.35} envMapIntensity={0.6} />
       </mesh>
-      {/* solar panel */}
-      <mesh position={[1.05, 3.1, 0]} rotation={[0, 0, -0.5]} castShadow>
-        <boxGeometry args={[1.6, 0.08, 1.1]} />
-        <meshStandardMaterial color="#20344d" metalness={0.55} roughness={0.3} envMapIntensity={0.9} />
+      {/* 三向拉线 + 地锚（实拍 review：裸杆读作路灯） */}
+      {[0.5, 2.6, 4.7].map((angle) => (
+        <group key={`guy-${angle}`}>
+          <Line
+            points={[
+              [0, 8.1, 0],
+              [Math.cos(angle) * 3.4, 0.12, Math.sin(angle) * 3.4],
+            ]}
+            color="#8f968f"
+            lineWidth={0.8}
+            transparent
+            opacity={0.75}
+          />
+          <mesh position={[Math.cos(angle) * 3.4, 0.1, Math.sin(angle) * 3.4]}>
+            <cylinderGeometry args={[0.05, 0.07, 0.25, 8]} />
+            <meshStandardMaterial color="#59625d" metalness={0.5} roughness={0.5} />
+          </mesh>
+        </group>
+      ))}
+      {/* 太阳能板：铝框 + 电池片栅线 */}
+      <group position={[1.05, 3.1, 0]} rotation={[0, 0, -0.5]}>
+        <mesh castShadow>
+          <boxGeometry args={[1.6, 0.08, 1.1]} />
+          <meshStandardMaterial color="#20344d" metalness={0.55} roughness={0.3} envMapIntensity={0.9} />
+        </mesh>
+        {[-0.78, 0.78].map((x) => (
+          <mesh key={`frame-x-${x}`} position={[x, 0.01, 0]}>
+            <boxGeometry args={[0.05, 0.1, 1.12]} />
+            <meshStandardMaterial color="#b9c0ba" metalness={0.7} roughness={0.35} />
+          </mesh>
+        ))}
+        {[-0.53, 0.53].map((z) => (
+          <mesh key={`frame-z-${z}`} position={[0, 0.01, z]}>
+            <boxGeometry args={[1.62, 0.1, 0.05]} />
+            <meshStandardMaterial color="#b9c0ba" metalness={0.7} roughness={0.35} />
+          </mesh>
+        ))}
+        {[-0.4, 0, 0.4].map((x) => (
+          <mesh key={`cell-x-${x}`} position={[x, 0.045, 0]}>
+            <boxGeometry args={[0.015, 0.005, 1.04]} />
+            <meshStandardMaterial color="#4a627f" metalness={0.5} roughness={0.35} />
+          </mesh>
+        ))}
+        {[-0.26, 0.26].map((z) => (
+          <mesh key={`cell-z-${z}`} position={[0, 0.045, z]}>
+            <boxGeometry args={[1.54, 0.005, 0.015]} />
+            <meshStandardMaterial color="#4a627f" metalness={0.5} roughness={0.35} />
+          </mesh>
+        ))}
+      </group>
+      {/* 百叶箱（防辐射罩）：支架贴杆 + 层板堆叠，不再悬空 */}
+      <mesh position={[-0.42, 4.4, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.035, 0.035, 0.8, 8]} />
+        <meshStandardMaterial color="#aeb6b0" metalness={0.7} roughness={0.4} />
       </mesh>
-      {/* radiation shield */}
-      <mesh position={[-0.85, 4.4, 0]} castShadow>
-        <cylinderGeometry args={[0.42, 0.42, 0.8, 12]} />
-        <meshStandardMaterial color="#dde3de" roughness={0.5} />
-      </mesh>
+      <group position={[-0.85, 4.4, 0]}>
+        {[0, 1, 2, 3, 4].map((plate) => (
+          <mesh key={plate} position-y={-0.2 + plate * 0.1} castShadow>
+            <cylinderGeometry args={[0.42 - Math.abs(plate - 2) * 0.03, 0.42 - Math.abs(plate - 2) * 0.03, 0.035, 14]} />
+            <meshStandardMaterial color="#dde3de" roughness={0.5} />
+          </mesh>
+        ))}
+      </group>
+      {/* 翻斗雨量计：漏斗 + 筒身 */}
+      <group position={[0.75, 5.3, 0]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.05, 0.05, 0.35, 12]} />
+          <meshStandardMaterial color="#c8cec8" metalness={0.4} roughness={0.45} />
+        </mesh>
+        <mesh position-y={0.28} castShadow>
+          <cylinderGeometry args={[0.16, 0.06, 0.18, 14]} />
+          <meshStandardMaterial color="#dde3de" roughness={0.45} />
+        </mesh>
+      </group>
       {/* crossarm + anemometer */}
       <mesh position={[0, 8.6, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.05, 0.05, 1.7, 8]} />
@@ -274,17 +347,86 @@ function WeatherStation() {
 }
 
 function Warehouse() {
+  // 墙面波纹金属板 PBR + 竖向压型肋条（instanced）——实拍 review：原纯米色
+  // 大盒是全场唯一无贴图的大型设施，而机库章节相机就在旁边。
+  const [wallColor, wallNormal, wallRoughness] = useMaterialMaps("Metal025", 2.4);
+  const [apronColor, apronNormal, apronRoughness] = useMaterialMaps("Concrete032", 1.8);
+  const ribGeometry = useMemo(() => new BoxGeometry(0.1, 6.4, 0.07), []);
+  const ribPlacements = useMemo(() => {
+    const placements: Array<{ position: [number, number, number]; rotated: boolean }> = [];
+    // 前/后墙（宽 22，z=±6.5）
+    for (let i = 0; i <= 38; i += 1) {
+      const x = -10.45 + i * 0.55;
+      placements.push({ position: [x, 3.4, 6.56], rotated: false }, { position: [x, 3.4, -6.56], rotated: false });
+    }
+    // 两侧墙（深 13，x=±11）
+    for (let i = 0; i <= 22; i += 1) {
+      const z = -6.05 + i * 0.55;
+      placements.push({ position: [11.06, 3.4, z], rotated: true }, { position: [-11.06, 3.4, z], rotated: true });
+    }
+    return placements;
+  }, []);
+  const applyRibs = (mesh: InstancedMesh | null) => {
+    if (!mesh) return;
+    const matrix = new Matrix4();
+    const quaternion = new Quaternion();
+    const rotated = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2);
+    const scale = new Vector3(1, 1, 1);
+    ribPlacements.forEach((rib, index) => {
+      quaternion.copy(rib.rotated ? rotated : new Quaternion());
+      matrix.compose(new Vector3(...rib.position), quaternion, scale);
+      mesh.setMatrixAt(index, matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  };
   return (
     <group position={[-122, 1.4, 112]} rotation={[0, -0.35, 0]}>
       <mesh position-y={0.12} receiveShadow>
         <boxGeometry args={[26, 0.25, 17]} />
-        <meshStandardMaterial color="#6f6a5c" roughness={0.95} envMapIntensity={0.25} />
+        <meshStandardMaterial color="#6f6a5c" map={apronColor} normalMap={apronNormal} roughnessMap={apronRoughness} roughness={0.95} envMapIntensity={0.25} />
       </mesh>
       <RoundedBox args={[22, 6.4, 13]} radius={0.4} smoothness={3} position-y={3.4} castShadow receiveShadow>
-        <meshStandardMaterial color="#84796a" roughness={0.85} envMapIntensity={0.35} />
+        <meshStandardMaterial color="#8a8577" map={wallColor} normalMap={wallNormal} roughnessMap={wallRoughness} roughness={0.72} metalness={0.35} envMapIntensity={0.4} />
       </RoundedBox>
+      <instancedMesh args={[ribGeometry, undefined, ribPlacements.length]} ref={applyRibs} castShadow>
+        <meshStandardMaterial color="#7e7a6e" map={wallColor} normalMap={wallNormal} roughnessMap={wallRoughness} roughness={0.68} metalness={0.4} envMapIntensity={0.45} />
+      </instancedMesh>
       <GableRoof width={23.4} height={3} depth={14.4} y={6.6} color="#414a44" />
-      {/* 双开间出库门：直接升级既有 STORE-01，不叠加第二座机库。 */}
+      {/* 屋脊盖板 + 檐口收边 */}
+      <mesh position={[0, 9.62, 0]} rotation={[0, 0, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.14, 14.6]} />
+        <meshStandardMaterial color="#39413c" metalness={0.4} roughness={0.5} />
+      </mesh>
+      {[-6.72, 6.72].map((z) => (
+        <mesh key={`eave-${z}`} position={[0, 6.62, z]} castShadow>
+          <boxGeometry args={[22.6, 0.16, 0.22]} />
+          <meshStandardMaterial color="#4a524c" metalness={0.42} roughness={0.5} />
+        </mesh>
+      ))}
+      {/* 屋顶通风帽 ×2（置于坡面，避开屋脊盖板） */}
+      {([[3, -4], [3, 4]] as const).map(([x, z]) => (
+        <group key={`roofvent-${z}`} position={[x, 8.95, z]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.32, 0.4, 0.7, 14]} />
+            <meshStandardMaterial color="#59625d" metalness={0.48} roughness={0.46} />
+          </mesh>
+          <mesh position-y={0.42} castShadow>
+            <cylinderGeometry args={[0.5, 0.32, 0.16, 14]} />
+            <meshStandardMaterial color="#3d4743" metalness={0.52} roughness={0.42} />
+          </mesh>
+        </group>
+      ))}
+      {/* 双开间出库门：门框 + 顶部滑轨 + 门板竖肋 + 拉手 */}
+      <mesh position={[0, 5.65, 6.68]} castShadow>
+        <boxGeometry args={[14.6, 0.3, 0.4]} />
+        <meshStandardMaterial color="#4a524c" metalness={0.45} roughness={0.5} />
+      </mesh>
+      {[-7.4, -0.6, 0.6, 7.4].map((x) => (
+        <mesh key={`doorpost-${x}`} position={[x, 2.9, 6.68]} castShadow>
+          <boxGeometry args={[0.28, 5.4, 0.38]} />
+          <meshStandardMaterial color="#4a524c" metalness={0.45} roughness={0.5} />
+        </mesh>
+      ))}
       {[-4, 4].map((doorX) => (
         <group key={doorX} position={[doorX, 2.9, 6.62]}>
           <mesh castShadow>
@@ -297,6 +439,16 @@ function Warehouse() {
               <meshStandardMaterial color="#68736c" metalness={0.34} roughness={0.58} />
             </mesh>
           ))}
+          {[-2.6, -1.3, 0, 1.3, 2.6].map((x) => (
+            <mesh key={`rib-${x}`} position={[x, 0, 0.17]}>
+              <boxGeometry args={[0.09, 4.9, 0.05]} />
+              <meshStandardMaterial color="#46564e" metalness={0.4} roughness={0.55} />
+            </mesh>
+          ))}
+          <mesh position={[doorX < 0 ? 2.9 : -2.9, -0.3, 0.24]}>
+            <boxGeometry args={[0.08, 0.7, 0.1]} />
+            <meshStandardMaterial color="#9aa29a" metalness={0.6} roughness={0.4} />
+          </mesh>
         </group>
       ))}
     </group>
@@ -342,18 +494,37 @@ function HeroPumpSkid() {
         <boxGeometry args={[2.4, 0.3, 1.6]} />
         <meshStandardMaterial color="#7d7a6e" map={padColor} normalMap={padNormal} roughnessMap={padRoughness} roughness={0.92} />
       </mesh>
-      {/* 钢撬装架：4 腿 + 平台 */}
-      {[-1.0, 1.0].flatMap((x) => [-0.6, 0.6].map((z) => (
-        <mesh key={`leg-${x}-${z}`} position={[x, 0.55, z]} castShadow>
-          <boxGeometry args={[0.09, 0.5, 0.09]} />
-          <meshStandardMaterial color="#4a5051" map={steelColor} normalMap={steelNormal} roughnessMap={steelRoughness} roughness={0.5} metalness={0.72} envMapIntensity={0.55} />
+      {/* 地脚螺栓：撬装设备是"锚"在底盘上的 */}
+      {[-1.05, 1.05].flatMap((x) => [-0.65, 0.65].map((z) => (
+        <mesh key={`anchor-${x}-${z}`} position={[x, 0.34, z]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.1, 8]} />
+          <meshStandardMaterial color="#3a3f3d" metalness={0.7} roughness={0.4} />
         </mesh>
       )))}
+      {/* 钢撬装架：踏板 + H 型钢腿 + 纵梁 + 平台（实拍 review：原细腿读作"桌子"） */}
+      {[-1.0, 1.0].flatMap((x) => [-0.6, 0.6].map((z) => (
+        <group key={`leg-${x}-${z}`} position={[x, 0, z]}>
+          <mesh position-y={0.36}>
+            <boxGeometry args={[0.24, 0.04, 0.24]} />
+            <meshStandardMaterial color="#454b4c" metalness={0.7} roughness={0.5} />
+          </mesh>
+          <mesh position-y={0.58} castShadow>
+            <boxGeometry args={[0.14, 0.44, 0.14]} />
+            <meshStandardMaterial color="#4a5051" map={steelColor} normalMap={steelNormal} roughnessMap={steelRoughness} roughness={0.5} metalness={0.72} envMapIntensity={0.55} />
+          </mesh>
+        </group>
+      )))}
+      {[-0.6, 0.6].map((z) => (
+        <mesh key={`beam-${z}`} position={[0, 0.68, z]} castShadow>
+          <boxGeometry args={[2.2, 0.1, 0.1]} />
+          <meshStandardMaterial color="#454b4c" metalness={0.7} roughness={0.5} />
+        </mesh>
+      ))}
       <mesh position={[0, 0.82, 0]} castShadow receiveShadow>
         <boxGeometry args={[2.1, 0.06, 1.25]} />
         <meshStandardMaterial color="#4a5051" map={steelColor} normalMap={steelNormal} roughnessMap={steelRoughness} roughness={0.5} metalness={0.72} envMapIntensity={0.55} />
       </mesh>
-      {/* 电机（卧式圆柱）+ 散热翅片 + 风扇罩 */}
+      {/* 电机（卧式圆柱）+ 散热翅片 + 风扇罩 + 接线盒 + 铭牌 */}
       <group position={[-0.45, MOTOR_Y, 0]}>
         <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
           <cylinderGeometry args={[0.22, 0.22, 0.7, 24]} />
@@ -369,12 +540,24 @@ function HeroPumpSkid() {
           <cylinderGeometry args={[0.24, 0.22, 0.06, 24]} />
           <meshStandardMaterial color="#25303a" roughness={0.6} metalness={0.45} />
         </mesh>
+        {/* 接线盒 + 铭牌 */}
+        <mesh position={[0.05, 0.26, 0]} castShadow>
+          <boxGeometry args={[0.22, 0.12, 0.16]} />
+          <meshStandardMaterial color="#2c3845" roughness={0.5} metalness={0.5} />
+        </mesh>
+        <mesh position={[0.1, 0.02, 0.225]}>
+          <boxGeometry args={[0.16, 0.1, 0.012]} />
+          <meshStandardMaterial color="#b9bda8" metalness={0.55} roughness={0.35} envMapIntensity={0.7} />
+        </mesh>
       </group>
-      {/* 联轴器 */}
+      {/* 联轴器 + 护罩（安全色） */}
       <mesh position={[0.05, MOTOR_Y, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.1, 0.1, 0.1, 16]} />
         <meshStandardMaterial color="#5a6062" roughness={0.4} metalness={0.7} />
       </mesh>
+      <RoundedBox args={[0.24, 0.3, 0.36]} radius={0.05} smoothness={2} position={[0.05, MOTOR_Y + 0.04, 0]} castShadow>
+        <meshStandardMaterial color="#b8892e" roughness={0.5} metalness={0.35} envMapIntensity={0.5} />
+      </RoundedBox>
       {/* 泵蜗壳（青铜色短圆柱 + 端盖） */}
       <mesh position={[0.25, MOTOR_Y, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.26, 0.26, 0.28, 28]} />
@@ -384,17 +567,56 @@ function HeroPumpSkid() {
         <cylinderGeometry args={[0.18, 0.18, 0.04, 20]} />
         <meshStandardMaterial color="#4d4030" roughness={0.5} metalness={0.6} />
       </mesh>
-      {/* 出水立管（向上接田面方向） */}
+      {/* 出水立管 → 法兰 → 弯头 → 水平出水段（接田面方向） */}
       <mesh position={[0.25, MOTOR_Y + 0.35, 0]} castShadow>
         <cylinderGeometry args={[0.07, 0.07, 0.5, 14]} />
         <meshStandardMaterial color="#5e6868" roughness={0.45} metalness={0.6} />
       </mesh>
-      {/* 进水管（从渠道侧水平接入） */}
-      <mesh position={[0.5, MOTOR_Y - 0.05, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.08, 0.08, 0.35, 14]} />
+      <mesh position={[0.25, MOTOR_Y + 0.58, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.1, 0.028, 8, 18]} />
+        <meshStandardMaterial color="#4d5757" metalness={0.65} roughness={0.4} />
+      </mesh>
+      <mesh position={[0.25, MOTOR_Y + 0.64, 0.08]} rotation={[Math.PI / 4, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.07, 0.07, 0.22, 14]} />
         <meshStandardMaterial color="#5e6868" roughness={0.45} metalness={0.6} />
       </mesh>
-      {/* 控制箱 + 状态 LED（灌溉启动时亮绿） */}
+      <mesh position={[0.25, MOTOR_Y + 0.72, 0.55]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.07, 0.07, 0.85, 14]} />
+        <meshStandardMaterial color="#5e6868" roughness={0.45} metalness={0.6} />
+      </mesh>
+      <mesh position={[0.25, MOTOR_Y + 0.72, 0.98]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.1, 0.028, 8, 18]} />
+        <meshStandardMaterial color="#4d5757" metalness={0.65} roughness={0.4} />
+      </mesh>
+      {/* 压力表：表盘 + 表针，装在立管上 */}
+      <group position={[0.25, MOTOR_Y + 0.5, 0.12]} rotation={[Math.PI / 2.6, 0, 0]}>
+        <mesh>
+          <cylinderGeometry args={[0.055, 0.055, 0.03, 16]} />
+          <meshStandardMaterial color="#3a3f3d" metalness={0.6} roughness={0.4} />
+        </mesh>
+        <mesh position-y={0.017}>
+          <cylinderGeometry args={[0.045, 0.045, 0.004, 16]} />
+          <meshStandardMaterial color="#e8e6d8" roughness={0.3} />
+        </mesh>
+        <mesh position={[0.012, 0.021, 0]} rotation={[0, 0.5, 0]}>
+          <boxGeometry args={[0.03, 0.002, 0.006]} />
+          <meshBasicMaterial color="#b03a2e" />
+        </mesh>
+      </group>
+      {/* 进水管（从渠道侧水平接入）+ 法兰 + 滤网罩 */}
+      <mesh position={[0.62, MOTOR_Y - 0.05, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.08, 0.08, 0.6, 14]} />
+        <meshStandardMaterial color="#5e6868" roughness={0.45} metalness={0.6} />
+      </mesh>
+      <mesh position={[0.44, MOTOR_Y - 0.05, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <torusGeometry args={[0.11, 0.03, 8, 18]} />
+        <meshStandardMaterial color="#4d5757" metalness={0.65} roughness={0.4} />
+      </mesh>
+      <mesh position={[0.94, MOTOR_Y - 0.05, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.1, 0.08, 0.08, 14]} />
+        <meshStandardMaterial color="#4d5757" metalness={0.6} roughness={0.45} />
+      </mesh>
+      {/* 控制箱 + 状态 LED（灌溉启动时亮绿）+ 电机电缆线槽 */}
       <group position={[0.95, 0.95, -0.45]}>
         <mesh castShadow>
           <boxGeometry args={[0.28, 0.45, 0.18]} />
@@ -405,6 +627,10 @@ function HeroPumpSkid() {
           <meshStandardMaterial ref={ledRef} color={active ? "#7ff0a5" : "#3a4540"} emissive={active ? "#3fdf7c" : "#000000"} emissiveIntensity={0} />
         </mesh>
       </group>
+      <mesh position={[0.3, 1.12, -0.28]} rotation={[0.5, 0, 0.9]}>
+        <cylinderGeometry args={[0.022, 0.022, 1.05, 8]} />
+        <meshStandardMaterial color="#2c3130" roughness={0.6} metalness={0.4} />
+      </mesh>
     </group>
   );
 }
