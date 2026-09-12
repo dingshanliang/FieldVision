@@ -13,10 +13,10 @@ export function TopBar() {
     <header className="top-bar">
       <div className="brand-lockup">
         <span className="brand-mark">禾境</span>
-        <div><strong>FieldVision</strong><small>智慧农业示范基地</small></div>
+        <div><strong>FieldVision</strong><small>农田数字孪生演示</small></div>
       </div>
       <div className="top-status">
-        <span><CloudSun size={15} /> 23°C · 东南风 2级</span>
+        <span><CloudSun size={15} /> 23 °C · 东南风 2 级</span>
         <span><i className="status-dot" /> 12 台设备在线</span>
         {introComplete && (
           <button className="icon-action" type="button" aria-label={playing ? paused ? "继续演示" : "暂停演示" : "播放完整演示"} onClick={() => playing ? togglePause() : void play()}>

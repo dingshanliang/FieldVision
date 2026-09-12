@@ -25,8 +25,8 @@ export function DemoTimeline() {
     return (
       <div className="intro-caption">
         <span>FIELDVISION / 01</span>
-        <strong>每一块田，都可以进入</strong>
-        <small>Loading spatial twin</small>
+        <strong>看见每一块田，掌握每一次变化</strong>
+        <small>从基地全景，到一块田的完整决策闭环</small>
         <button type="button" className="intro-skip" onClick={skipIntro} aria-label="跳过开场动画">跳过开场 →</button>
       </div>
     );
@@ -46,11 +46,11 @@ export function DemoTimeline() {
             {paused ? "继续" : "暂停"}
           </button>
         ) : (
-          <button type="button" className="play-demo" onClick={() => void play()}><Play size={15} fill="currentColor" />播放九章节</button>
+          <button type="button" className="play-demo" onClick={() => void play()}><Play size={15} fill="currentColor" />播放完整演示</button>
         )}
         <div className="pacing-toggle" role="group" aria-label="演示节奏">
-          <button type="button" className={pacing === "fast" ? "is-active" : ""} onClick={() => setPacing("fast")}>90 秒</button>
-          <button type="button" className={pacing === "narration" ? "is-active" : ""} onClick={() => setPacing("narration")}>150 秒</button>
+          <button type="button" className={pacing === "fast" ? "is-active" : ""} onClick={() => setPacing("fast")}>精简 90 秒</button>
+          <button type="button" className={pacing === "narration" ? "is-active" : ""} onClick={() => setPacing("narration")}>讲解 150 秒</button>
         </div>
       </div>
       <div className="timeline-track">
@@ -61,7 +61,7 @@ export function DemoTimeline() {
           </button>
         ))}
       </div>
-      <div className="director-hint" aria-hidden="true">空格 暂停 · ←/→ 章节 · Home 总览</div>
+      <div className="director-hint" aria-hidden="true">空格：暂停/继续 · ←/→：切换章节 · Home：返回总览</div>
     </footer>
   );
 }

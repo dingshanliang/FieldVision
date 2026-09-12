@@ -46,7 +46,7 @@ export function PresenterControls() {
   return (
     <div className="presenter-hud" role="status" aria-live="polite">
       <span className={`presenter-hud__state ${paused ? "is-paused" : ""}`}>{paused ? "⏸ 已暂停" : "▶ 演示中"}</span>
-      <span className="presenter-hud__hint">空格 暂停/继续 · ←/→ 章节 · Home 总览</span>
+      <span className="presenter-hud__hint">空格：暂停/继续 · ←/→：切换章节 · Home：返回总览</span>
     </div>
   );
 }

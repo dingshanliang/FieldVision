@@ -6,7 +6,7 @@ import { phaseEvidence, type RecoveryPhase } from "./recoveryModel";
  * 不再为土壤墒情背书（墒情由根区探头表达，见 recoveryModel）。
  */
 export const evidenceMetadata = {
-  provenance: "演示模拟",
+  provenance: "模拟观测",
   source: "多光谱无人机",
   capturedAt: "08:42",
   growthDelta: -12,

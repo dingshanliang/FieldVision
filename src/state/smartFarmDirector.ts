@@ -15,22 +15,22 @@ export interface SmartFarmSequenceChapter extends SmartFarmChapterMeta {
 }
 
 export const SMART_FARM_CHAPTER_META: readonly SmartFarmChapterMeta[] = [
-  { id: "base-online", label: "基地上线", outcome: "智慧基础设施进入在线状态", fastDurationMs: 10_000, narrationDurationMs: 16_000 },
-  { id: "daily-plan", label: "当日任务", outcome: "清晨作业计划完成模拟确认", fastDurationMs: 8_000, narrationDurationMs: 14_000 },
-  { id: "autonomous-operations", label: "无人作业", outcome: "地面设备出库并进入任务区", fastDurationMs: 12_000, narrationDurationMs: 22_000 },
-  { id: "coordinated-patrol", label: "空地巡田", outcome: "固定感知、地面巡检与航测协同", fastDurationMs: 10_000, narrationDurationMs: 17_000 },
-  { id: "a02-alert", label: "A02 异常", outcome: "多源观测形成待处置风险区", fastDurationMs: 10_000, narrationDurationMs: 17_000 },
+  { id: "base-online", label: "基地全景", outcome: "基地设施、农机与感知设备全面在线", fastDurationMs: 10_000, narrationDurationMs: 16_000 },
+  { id: "daily-plan", label: "今日作业", outcome: "今日作业计划已确认", fastDurationMs: 8_000, narrationDurationMs: 14_000 },
+  { id: "autonomous-operations", label: "无人作业", outcome: "无人农机按计划进入作业区", fastDurationMs: 12_000, narrationDurationMs: 22_000 },
+  { id: "coordinated-patrol", label: "协同巡田", outcome: "固定监测、地面巡检与无人机协同复核", fastDurationMs: 10_000, narrationDurationMs: 17_000 },
+  { id: "a02-alert", label: "发现缺水", outcome: "多源观测锁定 A02 缺水风险区", fastDurationMs: 10_000, narrationDurationMs: 17_000 },
   {
     id: "remote-decision",
     label: "远程确认",
-    outcome: "值守员确认处置范围与安全边界",
+    outcome: "值守员确认处置范围和安全边界",
     fastDurationMs: 10_000,
     narrationDurationMs: 15_000,
     simulatedConfirmationDelayMs: 3_000,
   },
-  { id: "irrigation-response", label: "泵闸执行", outcome: "水利链路按依赖顺序执行", fastDurationMs: 12_000, narrationDurationMs: 21_000 },
-  { id: "outcome-verification", label: "D1/D3 复测", outcome: "多源复测形成验证结果", fastDurationMs: 10_000, narrationDurationMs: 17_000 },
-  { id: "return-overview", label: "回库总览", outcome: "设备回库，基地持续运行", fastDurationMs: 8_000, narrationDurationMs: 11_000 },
+  { id: "irrigation-response", label: "联动供水", outcome: "泵站、闸门与渠道依次联动供水", fastDurationMs: 12_000, narrationDurationMs: 21_000 },
+  { id: "outcome-verification", label: "恢复验证", outcome: "连续复测确认 A02 恢复达标", fastDurationMs: 10_000, narrationDurationMs: 17_000 },
+  { id: "return-overview", label: "闭环完成", outcome: "设备回库，A02 风险解除，基地持续运行", fastDurationMs: 8_000, narrationDurationMs: 11_000 },
 ] as const;
 
 export function createSmartFarmSequencePlan(pacing: Pacing): SmartFarmSequenceChapter[] {

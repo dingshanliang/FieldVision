@@ -2,7 +2,7 @@ import { Html, Line } from "@react-three/drei";
 import { type ReactNode } from "react";
 import { useFarmStore } from "../state/useFarmStore";
 import { deriveEvidenceState } from "../state/evidenceModel";
-import { groundConfirmed, phaseEvidence, SOURCE_STYLE, type RecoveryPhase } from "../state/recoveryModel";
+import { groundConfirmed, phaseEvidence, recoveryDayLabel, SOURCE_STYLE, type RecoveryPhase } from "../state/recoveryModel";
 
 /**
  * A02 多源证据标注（fv-o6c.11 混合方案）。
@@ -92,9 +92,9 @@ export function SpatialEvidence() {
                 {i === 0 && showPointReadouts ? (
                   <SourceChip
                     color={SOURCE_STYLE.rootVwc.color}
-                    title="根区探头组"
-                    lines={[`P1–P3 · VWC ${phase.rootVwc.value}%`, `10cm · ${TREND_LABEL[phase.rootVwc.trend]}`]}
-                    dayTag={phase.rootVwc.dayTag}
+                    title="根区墒情监测"
+                    lines={[`3 个探头 · 含水率 ${phase.rootVwc.value}%`, `埋深 10 cm · ${TREND_LABEL[phase.rootVwc.trend]}`]}
+                    dayTag={recoveryDayLabel(phase.rootVwc.dayTag)}
                   />
                 ) : null}
               </Pin>
@@ -106,8 +106,8 @@ export function SpatialEvidence() {
               <SourceChip
                 color={SOURCE_STYLE.fieldLevel.color}
                 title={SOURCE_STYLE.fieldLevel.label}
-                lines={[`田间水位 ${phase.fieldLevel.cm}cm`, phase.fieldLevel.cm < 0 ? "低于田面" : "田面浅水"]}
-                dayTag={phase.fieldLevel.dayTag}
+                lines={[`田间水位 ${phase.fieldLevel.cm} cm`, phase.fieldLevel.cm < 0 ? "低于田面" : "田面浅水"]}
+                dayTag={recoveryDayLabel(phase.fieldLevel.dayTag)}
               />
             ) : null}
           </Pin>
@@ -117,8 +117,8 @@ export function SpatialEvidence() {
               <SourceChip
                 color={SOURCE_STYLE.channel.color}
                 title={SOURCE_STYLE.channel.label}
-                lines={[`水位 ${phase.channel.cm}cm`, phase.channel.arrived ? `已到水 ${phase.channel.arrivedAt}` : "未到水"]}
-                dayTag={phase.channel.dayTag}
+                lines={[`水位 ${phase.channel.cm} cm`, phase.channel.arrived ? `已到水 ${phase.channel.arrivedAt}` : "未到水"]}
+                dayTag={recoveryDayLabel(phase.channel.dayTag)}
               />
             ) : null}
           </Pin>
@@ -137,9 +137,9 @@ export function SpatialEvidence() {
       {showRecovery && (
         <Html position={[12, 10.5, -56]} center distanceFactor={78} zIndexRange={[32, 4]}>
           <div className="verification-slip">
-            <div><span>处置前 · D0</span><strong>18%</strong><small>异常 23.6 亩</small></div>
+            <div><span>处置前（D0）</span><strong>18%</strong><small>异常 23.6 亩</small></div>
             <i aria-hidden="true" />
-            <div><span>{phase.dayLabel} 复测</span><strong>{phase.rootVwc.value}%</strong><small>残余 {phase.canopy.areaMu} 亩</small></div>
+            <div><span>{recoveryDayLabel(phase.rootVwc.dayTag)}根区</span><strong>{phase.rootVwc.value}%</strong><small>{recoveryDayLabel(phase.dayLabel)}残余 {phase.canopy.areaMu} 亩</small></div>
             {PHASE_RANK[recoveryPhase] >= PHASE_RANK.resolved ? <em>风险已解除</em> : <em>恢复观察中</em>}
           </div>
         </Html>

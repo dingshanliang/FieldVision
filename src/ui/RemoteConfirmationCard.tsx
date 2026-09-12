@@ -11,9 +11,9 @@ export function RemoteConfirmationCard() {
   if (chapter !== "remote-decision" || !task) return null;
   const confirmed = task.status === "authorized";
   const buttonLabel = cue === "countdown"
-    ? `模拟值守员将在 ${countdown ?? 0} 秒后确认`
+    ? `自动演示将在 ${countdown ?? 0} 秒后模拟确认`
     : cue === "simulated-click"
-      ? "模拟值守员已点击确认"
+      ? "已完成模拟确认"
       : cue === "presenter-click"
         ? "演示者已确认执行"
         : "确认执行";
@@ -21,11 +21,11 @@ export function RemoteConfirmationCard() {
   return (
     <aside className="remote-confirmation" aria-label="A02 远程处置确认">
       <div className="remote-confirmation__head">
-        <span><ShieldCheck size={14} />监督式决策</span>
-        <em>演示模拟</em>
+        <span><ShieldCheck size={14} />人工确认后执行</span>
+        <em>模拟演示</em>
       </div>
       <h2>A02 东侧缺水风险处置</h2>
-      <p>固定墒情与多光谱复核共同提示连续低值，待值守员确认后执行，不代表单点自动确诊。</p>
+      <p>墒情监测与无人机多光谱复核共同发现连续低值区。系统不会仅凭单点数据自动处置，需由值守员确认后执行。</p>
       <dl>
         <div><dt>处置目标</dt><dd>{task.plan.objective}</dd></div>
         <div><dt>执行设备</dt><dd>{task.plan.equipmentLabel}</dd></div>
@@ -42,7 +42,7 @@ export function RemoteConfirmationCard() {
         {buttonLabel}
       </button>
       {task.confirmationReceipt ? (
-        <small>Confirmation Receipt · {task.confirmationReceipt.source === "presenter" ? "演示者入口" : "模拟自动播放入口"}</small>
+        <small>确认记录 · {task.confirmationReceipt.source === "presenter" ? "演示者手动确认" : "自动演示中的模拟确认"}</small>
       ) : <small>确认前不会启动泵闸链路</small>}
     </aside>
   );

@@ -65,7 +65,7 @@ function createBaseTasks(): Record<string, AutonomousTaskRecord> {
       equipmentId: "ROBOT-01",
       equipmentLabel: "田间巡检机器人",
       routeId: "CENTRAL-PATROL-ROUTE",
-      objective: "完成 A03/B02 边缘苗情与路况巡检",
+      objective: "完成 A03、B02 边缘苗情与路况巡检",
       expectedDurationMinutes: 42,
       safetyBoundaryLabel: "中央机耕路与批准地块边缘",
       parametersVersion: 1,

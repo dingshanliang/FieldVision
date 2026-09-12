@@ -87,8 +87,9 @@ button { color: inherit; }
 .timeline-track > button { display: grid; gap: 3px; padding: 0; border: 0; color: rgba(229,239,232,.37); background: transparent; font-size: .59rem; cursor: pointer; }
 .timeline-track > button:not(:first-of-type) { text-align: center; }.timeline-track > button:last-of-type { text-align: right; }
 .timeline-track i { font-family: ui-monospace, monospace; font-size: .5rem; font-style: normal; }.timeline-track .is-active { color: rgba(237,247,240,.86); }
-.intro-caption { position: absolute; bottom: 44px; left: 50%; display: grid; justify-items: center; gap: 7px; transform: translateX(-50%); text-shadow: 0 2px 20px rgba(0,0,0,.4); }
-.intro-caption span, .intro-caption small { color: rgba(247,232,214,.62); font-size: .56rem; letter-spacing: .22em; }.intro-caption strong { font-family: "Newsreader Variable", Georgia, serif; font-size: clamp(1.8rem,4vw,3.5rem); font-weight: 360; letter-spacing: -.03em; }
+.intro-caption { position: absolute; bottom: 44px; left: 50%; width: min(1100px,92vw); display: grid; justify-items: center; gap: 7px; transform: translateX(-50%); text-shadow: 0 2px 20px rgba(0,0,0,.4); }
+.intro-caption span, .intro-caption small { color: rgba(247,232,214,.62); font-size: .56rem; letter-spacing: .22em; }.intro-caption strong { font-family: "Newsreader Variable", Georgia, serif; font-size: clamp(1.8rem,4vw,3.5rem); font-weight: 360; letter-spacing: -.03em; white-space: nowrap; }
+@media (max-width: 560px) { .intro-caption strong { font-size: clamp(1.6rem,7vw,2rem); white-space: normal; text-align: center; } }
 
 .field-label { display: grid; min-width: 120px; gap: 2px; padding: 8px 10px; border: 1px solid rgba(235,245,238,.2); border-radius: 9px; color: #eef7f0; background: rgba(6,20,14,.68); backdrop-filter: blur(12px); box-shadow: 0 8px 25px rgba(0,0,0,.16); pointer-events: none; white-space: nowrap; }
 .field-label span { color: #8dd3b7; font-family: ui-monospace, monospace; font-size: 8px; letter-spacing: .08em; }.field-label strong { font-size: 11px; }.field-label small { color: rgba(234,243,237,.55); font-size: 8px; }.field-label--selected { border-color: rgba(104,207,179,.48); }

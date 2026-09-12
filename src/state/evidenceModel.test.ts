@@ -40,7 +40,7 @@ describe("deriveEvidenceState", () => {
 describe("evidenceMetadata", () => {
   it("labels UAV canopy capture truthfully and does not back soil moisture", () => {
     expect(evidenceMetadata).toMatchObject({
-      provenance: "演示模拟",
+      provenance: "模拟观测",
       source: "多光谱无人机",
       capturedAt: "08:42",
       growthDelta: -12,

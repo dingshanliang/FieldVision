@@ -25,7 +25,7 @@ export interface SourceStyle {
 
 /** 来源 → 颜色/标签（来源=颜色=图标，杜绝混源）。 */
 export const SOURCE_STYLE: Record<"canopy" | "rootVwc" | "fieldLevel" | "channel", SourceStyle> = {
-  canopy: { color: "#e07a3c", label: "冠层 · UAV 多光谱 NDRE" },
+  canopy: { color: "#e07a3c", label: "冠层长势 · 无人机多光谱（NDRE）" },
   rootVwc: { color: "#4a90d9", label: "根区墒情 · 土壤探头" },
   fieldLevel: { color: "#3aa6a0", label: "田间水位 · 观察管" },
   channel: { color: "#8a6fd1", label: "渠道水位 · 东支渠水尺" },
@@ -82,7 +82,7 @@ const PHASE_EVIDENCE: Record<RecoveryPhase, PhaseEvidence> = {
     channel: { cm: 18, arrived: true, arrivedAt: "09:06", dayTag: "D0" },
     cropRecovery: 0.5,
     canopyAnomalyStrength: 0.72,
-    narrative: "次日 D1 根区水分回到管理区间，转入作物恢复观察。冠层恢复仍需时间。",
+    narrative: "次日（D1），根区水分回到管理区间，转入作物恢复观察。冠层恢复仍需时间。",
     dayLabel: "D1",
   },
   "d3-reflight": {
@@ -92,7 +92,7 @@ const PHASE_EVIDENCE: Record<RecoveryPhase, PhaseEvidence> = {
     channel: { cm: 18, arrived: true, arrivedAt: "09:06", dayTag: "D0" },
     cropRecovery: 0.85,
     canopyAnomalyStrength: 0.3,
-    narrative: "D3 同条件复飞：连续低值区收敛至 0.8 亩，恢复趋势形成。",
+    narrative: "第 3 天（D3）同条件复飞，连续低值区收敛至 0.8 亩，恢复趋势形成。",
     dayLabel: "D3",
   },
   resolved: {
@@ -109,6 +109,16 @@ const PHASE_EVIDENCE: Record<RecoveryPhase, PhaseEvidence> = {
 
 export function phaseEvidence(phase: RecoveryPhase): PhaseEvidence {
   return PHASE_EVIDENCE[phase] ?? PHASE_EVIDENCE.none;
+}
+
+export function recoveryDayLabel(dayTag: string): string {
+  const labels: Record<string, string> = {
+    D0: "处置前（D0）",
+    D1: "次日（D1）",
+    D3: "第 3 天（D3）",
+    D7: "第 7 天（D7）",
+  };
+  return labels[dayTag] ?? dayTag;
 }
 
 /** 地面三类证据是否已进入"确认"阶段（扫描完成后到水前展示）。 */

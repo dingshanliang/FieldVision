@@ -2,7 +2,7 @@ import { ArrowDownToLine, ChevronRight, Droplets, ScanLine } from "lucide-react"
 import { fieldById } from "../data/fields";
 import { useDemoSequence } from "../hooks/useDemoSequence";
 import { useFarmStore } from "../state/useFarmStore";
-import { phaseEvidence } from "../state/recoveryModel";
+import { phaseEvidence, recoveryDayLabel } from "../state/recoveryModel";
 
 export function FieldDetailPanel() {
   const selectedId = useFarmStore((state) => state.selectedFieldId);
@@ -30,34 +30,34 @@ export function FieldDetailPanel() {
   return (
     <aside className="field-panel" aria-live="polite">
       <div className="panel-kicker"><span>地块档案</span><em className={`field-state field-state--${status}`}>{statusLabel}</em></div>
-      <div className="panel-title"><div><strong>{field.id}</strong><h2>{field.name}</h2></div><span>{field.areaMu}<small>亩</small></span></div>
+      <div className="panel-title"><div><strong>{field.id}</strong><h2>{field.name}</h2></div><span>{field.areaMu} <small>亩</small></span></div>
       <div className="crop-line"><LeafGlyph /><span>{field.cropLabel}</span><i />{field.growthStage}</div>
       <div className="metric-pair">
         <div>
-          <small>土壤墒情{isA02 ? " · 根区 10cm" : ""}</small>
+          <small>土壤墒情{isA02 ? " · 根区 10 cm" : ""}</small>
           <strong>{rootVwc}<sup>%</sup></strong>
           <span className={moistureOk ? "positive" : "warning"}>
-            {isA02 ? (moistureOk ? `已恢复 · ${phase.rootVwc.dayTag}` : `偏低 · ${phase.rootVwc.dayTag}`) : moistureOk ? "正常" : "偏低"}
+            {isA02 ? (moistureOk ? `已恢复 · ${recoveryDayLabel(phase.rootVwc.dayTag)}` : `偏低 · ${recoveryDayLabel(phase.rootVwc.dayTag)}`) : moistureOk ? "正常" : "偏低"}
           </span>
         </div>
         <div>
-          <small>长势指数{isA02 ? " · NDRE" : ""}</small>
+          <small>冠层长势{isA02 ? " · NDRE" : ""}</small>
           <strong>{isA02 ? `${phase.canopy.deltaPct}%` : field.growthIndex.toFixed(2)}</strong>
-          <span>{isA02 ? `相对对照 · ${phase.dayLabel}` : "近 7 日"}</span>
+          <span>{isA02 ? `相对同品种对照 · ${recoveryDayLabel(phase.dayLabel)}` : "近 7 日"}</span>
         </div>
       </div>
       {isA02 && status === "risk" && (
-        <div className="risk-note"><ScanLine size={17} /><p><strong>局部缺水风险</strong><span>冠层指数连续低于同品种平均值 12%，地面核验确认东支渠末端供水不足。</span></p></div>
+        <div className="risk-note"><ScanLine size={17} /><p><strong>局部缺水风险</strong><span>冠层指数较同品种对照低 12%，地面核验确认东支渠末端供水不足。</span></p></div>
       )}
       {isA02 && status === "processing" && (
         <div className="risk-note risk-note--processing"><ScanLine size={17} /><p><strong>灌溉处置中</strong><span>泵站与东支渠按供水顺序联动；到水当天只确认水到田，不代表已恢复。</span></p></div>
       )}
       {showRecovery && (
         <div className="recovery-proof">
-          <span><small>处置前 · D0</small><strong>18%</strong></span>
+          <span><small>处置前（D0）</small><strong>18%</strong></span>
           <i />
-          <span><small>{phase.dayLabel} 根区复测</small><strong>{phase.rootVwc.value}%</strong></span>
-          <em>冠层低值区 23.6 → {phase.canopy.areaMu} 亩（D3 复飞）</em>
+          <span><small>{recoveryDayLabel(phase.rootVwc.dayTag)}根区复测</small><strong>{phase.rootVwc.value}%</strong></span>
+          <em>冠层低值区 23.6 → {phase.canopy.areaMu} 亩（连续复测）</em>
         </div>
       )}
       <div className="panel-actions">
@@ -66,7 +66,7 @@ export function FieldDetailPanel() {
       </div>
       {isA02 && (
         <button type="button" className="primary-action" onClick={() => { stop(); applySmartFarmChapter("remote-decision"); }} disabled={chapter === "remote-decision" || progress > 0}>
-          <Droplets size={17} />{chapter === "remote-decision" ? "等待远程确认" : progress > 0 && progress < 1 ? `灌溉进行中 ${Math.round(progress * 100)}%` : progress >= 1 ? "处置结果已形成" : "查看处置方案"}<ChevronRight size={16} />
+          <Droplets size={17} />{chapter === "remote-decision" ? "等待远程确认" : progress > 0 && progress < 1 ? `灌溉进行中 ${Math.round(progress * 100)}%` : progress >= 1 ? "查看恢复结果" : "查看处置方案"}<ChevronRight size={16} />
         </button>
       )}
     </aside>

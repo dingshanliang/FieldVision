@@ -12,7 +12,7 @@ describe("precheckIssues", () => {
   });
 
   it("flags assets not ready", () => {
-    expect(precheckIssues("overview", false, true)).toContain("资产未完成");
+    expect(precheckIssues("overview", false, true)).toContain("三维场景加载中");
   });
 
   it("flags canvas not ready", () => {
@@ -33,7 +33,7 @@ describe("isRecoverable", () => {
 
   it("treats canvas/asset problems as not auto-recoverable", () => {
     expect(isRecoverable(["画布未就绪"])).toBe(false);
-    expect(isRecoverable(["资产未完成"])).toBe(false);
+    expect(isRecoverable(["三维场景加载中"])).toBe(false);
     expect(isRecoverable(["章节状态异常（wibble）", "画布未就绪"])).toBe(false);
   });
 });

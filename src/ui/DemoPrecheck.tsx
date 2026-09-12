@@ -58,7 +58,8 @@ export function DemoPrecheck() {
   }, [result, reset]);
 
   if (!result) return null;
-  const tierLabel = result.tier === "unknown" ? "" : `${result.tier} 档`;
+  const preparing = !result.introComplete
+    && result.issues.every((issue) => issue === "画布未就绪" || issue === "三维场景加载中");
   const handleReset = () => {
     reset();
     setResult(runPrecheck());
@@ -97,13 +98,13 @@ export function DemoPrecheck() {
         }}
       />
       <span className="demo-precheck__text">
-        {result.ok ? `就绪 · ${tierLabel}`.trim() : `异常：${result.issues.join("、")}`}
+        {result.ok ? "画面已就绪" : preparing ? "三维场景加载中" : `场景检查：${result.issues.join("、")}`}
       </span>
       <button
         type="button"
         className="demo-precheck__reset"
         onClick={handleReset}
-        title="停止演示并回到稳定的基地总览"
+        title="停止演示并返回基地总览"
         style={{
           margin: 0,
           padding: "2px 8px",

@@ -34,7 +34,7 @@ const VALID_STEPS: readonly string[] = [
 export function precheckIssues(demoStep: string, introComplete: boolean, canvasOk: boolean): string[] {
   const issues: string[] = [];
   if (!canvasOk) issues.push("画布未就绪");
-  if (!introComplete) issues.push("资产未完成");
+  if (!introComplete) issues.push("三维场景加载中");
   if (!VALID_STEPS.includes(demoStep)) issues.push(`章节状态异常（${demoStep}）`);
   return issues;
 }

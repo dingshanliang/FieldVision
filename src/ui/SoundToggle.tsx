@@ -71,7 +71,7 @@ export function SoundToggle() {
   return (
     <>
       {hintVisible && (
-        <span className="sound-hint" aria-hidden="true">◀ 点击开启电影音效</span>
+        <span className="sound-hint" aria-hidden="true">◀ 开启环境音效，体验更完整</span>
       )}
       <button
         type="button"
@@ -79,7 +79,7 @@ export function SoundToggle() {
         onClick={toggle}
         aria-pressed={enabled}
         aria-label={enabled ? "关闭声音" : "开启声音"}
-        title={enabled ? "关闭声音（合成底噪 + 章节 SFX）" : "开启声音（合成底噪 + 章节 SFX）"}
+        title={enabled ? "关闭环境音效" : "开启环境音效"}
         style={{
           position: "fixed",
           right: 12,
