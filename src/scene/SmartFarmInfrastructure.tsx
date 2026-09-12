@@ -1,13 +1,14 @@
 import { Html, Line, RoundedBox } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
-import type { Group } from "three";
-import { BoxGeometry, Color, CylinderGeometry, Matrix4, Quaternion, Vector3 } from "three";
+import type { Group, InstancedMesh, Mesh } from "three";
+import { AdditiveBlending, BoxGeometry, Color, CylinderGeometry, Matrix4, Quaternion, SphereGeometry, Vector3 } from "three";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import {
   corridorForChapter,
   selectSupportNetwork,
   spatialDetailLevel,
+  type SupportNode,
   type SupportNodeKind,
 } from "../data/smartFarmInfrastructure";
 import { droneDockingState } from "./droneDockingState";
@@ -34,6 +35,105 @@ const MATRIX = new Matrix4();
 const POSITION = new Vector3();
 const SCALE = new Vector3(1, 1, 1);
 const ROTATION = new Quaternion();
+
+// 数据回传拓扑：所有感知节点向作业场边缘控制柜（EDGE-YARD）回传。
+const TOPOLOGY_ANCHOR: readonly [number, number, number] = [-102, 3.2, 122];
+const FLOW_PACKETS_PER_LINE = 2;
+const FLOW_TRAVEL_SECONDS = 5.2;
+const FLOW_GEOMETRY = new SphereGeometry(0.34, 10, 10);
+
+interface FlowSegment {
+  from: Vector3;
+  to: Vector3;
+  offset: number;
+  lift: number;
+  color: Color;
+}
+
+// 沿回传链路流动的"数据包"光点：方向为 节点 → 边缘控制柜。
+function TopologyFlow({ nodes }: { nodes: readonly SupportNode[] }) {
+  const paused = useFarmStore((state) => state.paused);
+  const meshRef = useRef<InstancedMesh>(null);
+  const clock = useRef(0);
+
+  const segments = useMemo<FlowSegment[]>(
+    () =>
+      nodes.map((node, index) => {
+        const from = new Vector3(node.position[0], node.position[1] + 0.6, node.position[2]);
+        const to = new Vector3(TOPOLOGY_ANCHOR[0], TOPOLOGY_ANCHOR[1], TOPOLOGY_ANCHOR[2]);
+        const length = from.distanceTo(to);
+        return {
+          from,
+          to,
+          offset: (index * 0.37) % 1,
+          lift: Math.min(7, length * 0.045),
+          color: new Color(NODE_COLOR[node.kind]),
+        };
+      }),
+    [nodes],
+  );
+
+  const applyColors = (mesh: InstancedMesh | null) => {
+    if (!mesh) return;
+    segments.forEach((segment, nodeIndex) => {
+      for (let k = 0; k < FLOW_PACKETS_PER_LINE; k += 1) {
+        mesh.setColorAt(nodeIndex * FLOW_PACKETS_PER_LINE + k, segment.color);
+      }
+    });
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  };
+
+  useFrame((_, delta) => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    if (!paused) clock.current = (clock.current + delta / FLOW_TRAVEL_SECONDS) % 1;
+    let instance = 0;
+    for (const segment of segments) {
+      for (let k = 0; k < FLOW_PACKETS_PER_LINE; k += 1) {
+        const t = (clock.current + segment.offset + k / FLOW_PACKETS_PER_LINE) % 1;
+        POSITION.lerpVectors(segment.from, segment.to, t);
+        POSITION.y += Math.sin(t * Math.PI) * segment.lift;
+        const pulse = 0.75 + 0.45 * Math.sin((t * 2 + segment.offset) * Math.PI * 2);
+        SCALE.setScalar(pulse);
+        MATRIX.compose(POSITION, ROTATION, SCALE);
+        mesh.setMatrixAt(instance, MATRIX);
+        instance += 1;
+      }
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh
+      args={[FLOW_GEOMETRY, undefined, segments.length * FLOW_PACKETS_PER_LINE]}
+      ref={(mesh) => {
+        meshRef.current = mesh;
+        applyColors(mesh);
+      }}
+      frustumCulled={false}
+    >
+      <meshBasicMaterial vertexColors transparent opacity={0.9} blending={AdditiveBlending} depthWrite={false} />
+    </instancedMesh>
+  );
+}
+
+// 汇聚终点：边缘控制柜处的脉动光晕。
+function TopologyAnchorPulse() {
+  const paused = useFarmStore((state) => state.paused);
+  const glowRef = useRef<Mesh>(null);
+  const phase = useRef(0);
+  useFrame((_, delta) => {
+    if (!glowRef.current) return;
+    if (!paused) phase.current += delta;
+    glowRef.current.scale.setScalar(1 + 0.35 * Math.sin(phase.current * 2.4));
+  });
+  return (
+    <mesh ref={glowRef} position={[TOPOLOGY_ANCHOR[0], TOPOLOGY_ANCHOR[1] + 0.4, TOPOLOGY_ANCHOR[2]]}>
+      <sphereGeometry args={[0.9, 14, 14]} />
+      <meshBasicMaterial color={NODE_COLOR["edge-cabinet"]} transparent opacity={0.35} blending={AdditiveBlending} depthWrite={false} />
+    </mesh>
+  );
+}
 
 function DroneDockLid() {
   const lid = useRef<Group>(null);
@@ -73,7 +173,7 @@ function DroneDockStatusLabel() {
   });
   return (
     <Html position={[19, 4.2, 6]} center distanceFactor={56} zIndexRange={[25, 4]}>
-      <div className="facility-tag"><i className="is-online" />UAV-01 · {DOCK_STATUS_LABEL[phase]}</div>
+      <div className="facility-tag"><i className="is-online" />巡田无人机 01 · {DOCK_STATUS_LABEL[phase]}</div>
     </Html>
   );
 }
@@ -176,16 +276,20 @@ function SupportNetwork() {
       {topologyVisible && nodes.map((node) => (
         <Line
           key={`topology-${node.id}`}
-          points={[[-102, 3.2, 122], node.position]}
+          points={[TOPOLOGY_ANCHOR, node.position]}
           color={NODE_COLOR[node.kind]}
-          lineWidth={0.65}
-          dashed
-          dashSize={2.1}
-          gapSize={2.8}
+          lineWidth={0.5}
           transparent
-          opacity={0.25}
+          opacity={0.14}
         />
       ))}
+
+      {topologyVisible && (
+        <>
+          <TopologyFlow nodes={nodes} />
+          <TopologyAnchorPulse />
+        </>
+      )}
 
       {corridor ? (
         <Line points={corridor.points} color={corridor.color} lineWidth={2.2} transparent opacity={0.78} />
