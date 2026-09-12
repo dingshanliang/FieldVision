@@ -27,6 +27,10 @@ METAL = material("Machined metal", (0.24, 0.29, 0.27), 0.76, 0.2)
 LENS = material("Camera lens", (0.008, 0.022, 0.026), 0.15, 0.08)
 ACCENT = material("FieldVision signal", (0.05, 0.42, 0.29), 0.18, 0.22, (0.08, 0.85, 0.48))
 PROPELLER = material("Propeller", (0.032, 0.04, 0.038), 0.12, 0.42)
+PROP_TIP = material("Prop tip amber", (0.82, 0.52, 0.04), 0.22, 0.42)
+LED_RED = material("Nav red", (0.45, 0.015, 0.015), 0.1, 0.3, (1.0, 0.06, 0.05))
+LED_GREEN = material("Nav green", (0.015, 0.45, 0.1), 0.1, 0.3, (0.06, 1.0, 0.3))
+LED_AMBER = material("Nav amber", (0.45, 0.26, 0.02), 0.1, 0.3, (1.0, 0.6, 0.12))
 
 
 def finish(obj, mat, bevel=0.08, bevel_segments=3):
@@ -53,6 +57,13 @@ def cube(name, location, scale, mat, rotation=(0, 0, 0), bevel=0.08):
 
 def cylinder(name, location, radius, depth, mat, rotation=(0, 0, 0), vertices=32, bevel=0.04):
     bpy.ops.mesh.primitive_cylinder_add(vertices=vertices, radius=radius, depth=depth, location=location, rotation=rotation)
+    obj = bpy.context.object
+    obj.name = name
+    return finish(obj, mat, bevel)
+
+
+def cone(name, location, radius1, radius2, depth, mat, rotation=(0, 0, 0), vertices=20, bevel=0.02):
+    bpy.ops.mesh.primitive_cone_add(vertices=vertices, radius1=radius1, radius2=radius2, depth=depth, location=location, rotation=rotation)
     obj = bpy.context.object
     obj.name = name
     return finish(obj, mat, bevel)
@@ -124,6 +135,13 @@ def build_propeller(name, radius=1.74):
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
     finish(obj, PROPELLER, 0.012, bevel_segments=2)
+    # 桨尖警示色：每片桨叶最后一站环面 + 端盖改用琥珀色材料（材料槽 1）。
+    obj.data.materials.append(PROP_TIP)
+    ring_faces = (stations - 1) * 4
+    per_blade = ring_faces + 1
+    for poly in obj.data.polygons:
+        if poly.index % per_blade >= ring_faces - 4:
+            poly.material_index = 1
     return obj
 
 
@@ -155,11 +173,16 @@ for suffix, sx, sy in arm_specs:
     mx, my = (x0 + x1) / 2, (y0 + y1) / 2
     length = math.hypot(x1 - x0, y1 - y0) + 0.3
     angle = math.atan2(y1 - y0, x1 - x0)
-    cylinder(f"Arm_{suffix}", (mx, my, 0.22), 0.13, length, CARBON, rotation=(0, math.pi / 2, angle), vertices=20, bevel=0.02)
-    # Brushless motor: base, bell and shaft.
+    # 锥形碳管机臂：根部粗、电机端细，读作真实承力结构而非等径圆管。
+    cone(f"Arm_{suffix}", (mx, my, 0.22), 0.10, 0.17, length, CARBON, rotation=(0, -math.pi / 2, angle), vertices=20, bevel=0.02)
+    # Brushless motor: base, bell and shaft + 底部散热环。
     cylinder(f"MotorBase_{suffix}", (x1, y1, 0.3), 0.34, 0.18, CARBON, bevel=0.03)
+    cylinder(f"MotorCooling_{suffix}", (x1, y1, 0.42), 0.31, 0.05, CARBON, vertices=24, bevel=0.01)
     sphere(f"Motor_{suffix}", (x1, y1, 0.5), (0.3, 0.3, 0.24), METAL, segments=24, rings=12)
     cylinder(f"MotorShaft_{suffix}", (x1, y1, 0.72), 0.06, 0.28, METAL, vertices=16, bevel=0.01)
+    # 航行灯：机头朝 -Y（SignalBar 一侧），左红右绿、尾部琥珀。
+    nav = LED_RED if (sx < 0 and sy < 0) else LED_GREEN if (sx > 0 and sy < 0) else LED_AMBER
+    sphere(f"NavLight_{suffix}", (x1, y1, 0.58), (0.07, 0.07, 0.05), nav, segments=14, rings=8)
     prop = build_propeller(f"Rotor_{suffix}")
     prop.location = (x1, y1, PROP_Z)
     cylinder(f"Foot_{suffix}", (sx * 1.7, sy * 1.7, -0.85), 0.09, 1.3, CARBON, rotation=(math.radians(12) * sy, math.radians(12) * sx, 0), bevel=0.02)

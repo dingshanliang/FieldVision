@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
+import { fields } from "../data/fields";
 import { MACHINE_ACTIVITY_LIMITS, createMotionSample, evaluateMachineMotion, selectActiveMachineIds } from "./autonomousMachineMotion";
+
+function fieldContaining(x: number, z: number): string | null {
+  for (const field of fields) {
+    const poly = field.polygon;
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, zi] = poly[i]!;
+      const [xj, zj] = poly[j]!;
+      if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+    }
+    if (inside) return field.id;
+  }
+  return null;
+}
 
 describe("autonomous machine motion", () => {
   it("respects the total active-device budget after counting the drone", () => {
@@ -40,6 +55,30 @@ describe("autonomous machine motion", () => {
       const sample = evaluateMachineMotion(id, "return-overview", 1, createMotionSample());
       expect(sample.phase).toMatch(/charging|parked/);
       expect(sample.receipt).toContain("回库");
+    }
+  });
+
+  it("keeps every machine route out of unapproved field parcels", () => {
+    // 安全边界语义：拖拉机只允许进入 B03（批准补播条带），巡检机器人与
+    // 渠道割草维护机全程不得进入任何田块。逐帧采样所有会出现运动的章节。
+    const allowed: Record<string, string | null> = {
+      "tractor-seeder": "B03",
+      "inspection-robot": null,
+      "maintenance-vehicle": null,
+    };
+    const chapters = ["autonomous-operations", "coordinated-patrol", "return-overview"] as const;
+    for (const [id, allowedField] of Object.entries(allowed)) {
+      for (const chapter of chapters) {
+        const sample = createMotionSample();
+        for (let step = 0; step <= 100; step++) {
+          evaluateMachineMotion(id as "tractor-seeder", chapter, step / 100, sample);
+          const hit = fieldContaining(sample.position[0], sample.position[2]);
+          expect(
+            hit === null || hit === allowedField,
+            `${id} @ ${chapter} p=${step / 100} entered ${hit} (${sample.position.map((v) => v.toFixed(1)).join(",")})`,
+          ).toBe(true);
+        }
+      }
     }
   });
 });

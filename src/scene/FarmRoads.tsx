@@ -8,6 +8,7 @@ import {
   SRGBColorSpace,
   Vector3,
 } from "three";
+import { roadPaths } from "../data/farmRoads";
 
 /**
  * Farm track network: a ring road around the field blocks plus a short spur
@@ -15,15 +16,6 @@ import {
  * most ±0.32 there, so y = 0.34 keeps the surface above ground everywhere).
  */
 const ROAD_Y = 0.34;
-const roadPaths: Array<{ points: Array<[number, number]>; width: number }> = [
-  { points: [[-165, -104], [-60, -106], [40, -103], [162, -100]], width: 5.6 }, // south
-  { points: [[162, -100], [166, -20], [164, 60], [150, 96]], width: 5.6 }, // east
-  { points: [[150, 96], [110, 102], [92, 103]], width: 4.2 }, // pump spur
-  { points: [[-165, -104], [-168, 0], [-166, 80], [-150, 122]], width: 5.2 }, // west
-  { points: [[-150, 122], [-60, 126], [30, 124], [80, 120]], width: 5.2 }, // north
-  { points: [[-153, -18], [-82, -21], [-10, -22], [63, -20], [154, -15]], width: 4.4 }, // central field track
-  { points: [[-49, -98], [-47, -56], [-48, -20], [-43, 36], [-36, 79], [-30, 118]], width: 3.8 }, // north-south service track
-];
 
 function createRoadGeometry(points: Array<[number, number]>, width: number) {
   const curve = new CatmullRomCurve3(points.map(([x, z]) => new Vector3(x, 0, z)), false, "catmullrom", 0.35);

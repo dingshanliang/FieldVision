@@ -30,8 +30,8 @@ export interface SmartMachineAsset {
 export const SMART_MACHINE_ASSETS: readonly SmartMachineAsset[] = [
   {
     id: "maintenance-vehicle",
-    label: "MOWER-01 · 自主维护设备",
-    taskLabel: "东侧维护带待命",
+    label: "渠道割草维护机 01",
+    taskLabel: "东侧渠道维护带割草",
     url: "/assets/models/fieldvision-maintenance-vehicle.glb",
     maxBytes: 300_000,
     requiredNodes: ["MaintenanceVehicleRig", "MowerDeckRig", "MowerBlade", "SafetyBeacon"],
@@ -44,10 +44,11 @@ export const SMART_MACHINE_ASSETS: readonly SmartMachineAsset[] = [
   },
   {
     id: "tractor-seeder",
-    label: "TRACTOR-01 · 无人拖拉机",
+    label: "无人拖拉机 01",
     taskLabel: "B03 六行补播作业",
     url: "/assets/models/fieldvision-autonomous-tractor-seeder.glb",
-    maxBytes: 500_000,
+    // 精致度翻新（胎纹/轮毂螺栓/排气管/挡泥板等）后体积 ~504KB，预算同步上调。
+    maxBytes: 600_000,
     requiredNodes: ["AutonomousTractorRig", "TractorBodyRig", "SeederLift", "RowUnit_6"],
     supportLodHiddenNodes: ["LeftMarkerArm", "RightMarkerArm", "CabGlassLeft", "CabGlassRear", "CabGlassRight", "WheelHubFront_-1.05", "WheelHubFront_1.05"],
     chapter: "autonomous-operations",
@@ -58,8 +59,8 @@ export const SMART_MACHINE_ASSETS: readonly SmartMachineAsset[] = [
   },
   {
     id: "inspection-robot",
-    label: "ROBOT-01 · 田间巡检机器人",
-    taskLabel: "A03 / B02 协同巡检",
+    label: "田间巡检机器人 01",
+    taskLabel: "A03、B02 协同巡检",
     url: "/assets/models/fieldvision-inspection-robot.glb",
     maxBytes: 300_000,
     requiredNodes: ["InspectionRobotRig", "TrackLeft", "TrackRight", "SensorGimbal"],

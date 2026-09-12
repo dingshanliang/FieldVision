@@ -10,6 +10,7 @@ import {
 } from "../data/smartMachineAssets";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { useFarmStore } from "../state/useFarmStore";
+import { fieldSurfaceAt } from "../utils/groundHeight";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import {
   createMotionSample,
@@ -32,7 +33,8 @@ const CHAPTER_DURATION_SECONDS = {
 
 const WHEEL_NAMES: Record<SmartMachineId, readonly string[]> = {
   "tractor-seeder": ["WheelFrontLeft", "WheelFrontRight", "WheelRearLeft", "WheelRearRight"],
-  "inspection-robot": ["TrackLeft", "TrackRight"],
+  // 履带整体并不自转——履带板是静态的，滚动的是内侧负重轮。
+  "inspection-robot": ["TrackWheel_-0.67_-0.5", "TrackWheel_-0.67_0", "TrackWheel_-0.67_0.5", "TrackWheel_0.67_-0.5", "TrackWheel_0.67_0", "TrackWheel_0.67_0.5"],
   "maintenance-vehicle": ["MaintenanceWheel_-0.78_-0.72", "MaintenanceWheel_-0.78_0.72", "MaintenanceWheel_0.78_-0.72", "MaintenanceWheel_0.78_0.72"],
 };
 
@@ -49,6 +51,9 @@ function SmartMachine({ asset, isHero, lowTierHero }: { asset: SmartMachineAsset
   const progress = useRef(0);
   const previousChapter = useRef(useFarmStore.getState().smartFarmChapter);
   const sample = useRef(createMotionSample());
+  // 地形贴合：田块是 elevation+0.42 的台地，运动路径的 y 是按路面手调的。
+  // 进田时平滑爬升到畦土面，避免整车陷入田面（实拍前轮埋进土里）。
+  const smoothedY = useRef<number | null>(null);
   const chapter = useFarmStore((state) => state.smartFarmChapter);
   const demoPlaying = useFarmStore((state) => state.demoPlaying);
   const paused = useFarmStore((state) => state.paused);
@@ -94,6 +99,8 @@ function SmartMachine({ asset, isHero, lowTierHero }: { asset: SmartMachineAsset
     if (previousChapter.current !== chapter) {
       progress.current = demoPlaying && motionChapter !== "daily-plan" ? 0 : motionChapter === "daily-plan" ? 0 : manualProgress(motionChapter);
       previousChapter.current = chapter;
+      // 章节切换会瞬移农机（场院→田间），y 同步贴地而不是从旧高度爬升。
+      smoothedY.current = null;
     }
     if (demoPlaying && !paused && motionChapter !== "daily-plan") {
       progress.current = Math.min(1, progress.current + delta / CHAPTER_DURATION_SECONDS[motionChapter]);
@@ -102,7 +109,11 @@ function SmartMachine({ asset, isHero, lowTierHero }: { asset: SmartMachineAsset
     }
 
     const motion = evaluateMachineMotion(asset.id, motionChapter, progress.current, sample.current);
-    target.position.set(motion.position[0], motion.position[1], motion.position[2]);
+    const fieldY = fieldSurfaceAt(motion.position[0], motion.position[2]);
+    const targetY = fieldY ?? motion.position[1];
+    if (smoothedY.current === null) smoothedY.current = targetY;
+    smoothedY.current += (targetY - smoothedY.current) * Math.min(1, delta * 3.5);
+    target.position.set(motion.position[0], smoothedY.current, motion.position[2]);
     target.rotation.y = motionChapter === "daily-plan" ? asset.rotationY : motion.heading + Math.PI;
     const wheelSpeed = motion.speedScale * delta * 7;
     for (const name of WHEEL_NAMES[asset.id]) {
@@ -114,7 +125,7 @@ function SmartMachine({ asset, isHero, lowTierHero }: { asset: SmartMachineAsset
     const mowerBlade = model.getObjectByName("MowerBlade");
     if (seederLift) seederLift.rotation.x = MathUtils.lerp(seederLift.rotation.x, motion.implementDown ? 0 : -0.28, Math.min(1, delta * 5));
     if (gimbal) gimbal.rotation.y = Math.sin(clock.elapsedTime * 0.8) * 0.62;
-    if (mowerBlade && motion.speedScale > 0) mowerBlade.rotation.z += delta * 18;
+    if (mowerBlade && motion.implementDown) mowerBlade.rotation.z += delta * 18;
     if (qaTelemetryEnabled) {
       const qaWindow = window as unknown as {
         __machineTelemetry?: Record<string, { position: number[]; rotationY: number; movingPartRotation: number[] }>;
@@ -133,10 +144,12 @@ function SmartMachine({ asset, isHero, lowTierHero }: { asset: SmartMachineAsset
 
   const exception = task?.exception;
   const status = exception
-    ? `${exception.message} · 请求模拟人工接管`
+    ? `${exception.message} · 已通知值守员处理`
     : chapter === "return-overview"
-      ? "任务完成 · 已回库补能"
-      : `${asset.taskLabel} · ${Math.round((task?.progress ?? 0) * 100)}%`;
+      ? "任务完成 · 返回场院补能"
+      : chapter === "autonomous-operations" || chapter === "coordinated-patrol"
+        ? `${asset.taskLabel} · ${Math.round((task?.progress ?? 0) * 100)}%`
+        : `${asset.taskLabel} · 场院自检待命`;
 
   return (
     <group ref={group} position={asset.position} rotation={[0, asset.rotationY, 0]}>

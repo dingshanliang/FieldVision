@@ -9,7 +9,7 @@ export const fields: FieldParcel[] = [
   },
   {
     id: "A02", name: "东区二号田", cropType: "rice", cropLabel: "水稻", growthStage: "分蘖期", areaMu: 180,
-    status: "risk", polygon: [[-29,-98],[53,-90],[64,-31],[-24,-28],[-44,-60]], elevation: 1.2,
+    status: "risk", polygon: [[-29,-98],[53,-90],[64,-31],[-24,-28],[-39,-60]], elevation: 1.2,
     moisture: 18, moistureTarget: 27, growthIndex: 0.54, color: "#658a3d",
     cameraPresets: {
       aerial: { position: [38,48,2], target: [8,0,-61], duration: 2.1 },
@@ -26,13 +26,13 @@ export const fields: FieldParcel[] = [
   },
   {
     id: "B01", name: "西南一号田", cropType: "rice", cropLabel: "水稻", growthStage: "分蘖期", areaMu: 190,
-    status: "normal", polygon: [[-140,3],[-63,-13],[-45,55],[-119,79],[-151,42]], elevation: 0.3,
+    status: "normal", polygon: [[-140,3],[-63,-13],[-53,55],[-119,79],[-151,42]], elevation: 0.3,
     moisture: 29, moistureTarget: 28, growthIndex: 0.66, color: "#5d843d",
     cameraPresets: { aerial: { position: [-95,50,88], target: [-95,0,28], duration: 2.2 }, ground: { position: [-126,3,30], target: [-72,2,38], duration: 2.5 } },
   },
   {
     id: "B02", name: "中区二号田", cropType: "vegetable", cropLabel: "叶菜", growthStage: "生长期", areaMu: 160,
-    status: "processing", polygon: [[-38,-11],[51,-17],[60,55],[-26,66],[-51,34]], elevation: 0.9,
+    status: "processing", polygon: [[-38,-11],[51,-17],[60,55],[-26,66],[-44,34]], elevation: 0.9,
     moisture: 23, moistureTarget: 26, growthIndex: 0.63, color: "#42774d",
     cameraPresets: { aerial: { position: [10,48,75], target: [5,0,24], duration: 2.2 }, ground: { position: [-27,3,33], target: [35,2,28], duration: 2.5 } },
   },
