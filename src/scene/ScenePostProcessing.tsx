@@ -2,6 +2,7 @@ import { Bloom, ChromaticAberration, DepthOfField, EffectComposer, N8AO, Noise, 
 import { BlendFunction, ToneMappingMode } from "postprocessing";
 import { Vector2 } from "three";
 import { visualConfig } from "../config/visual";
+import { resolveLightingTargets } from "../config/dayNight";
 import { useFarmStore } from "../state/useFarmStore";
 import { povCutEngaged } from "./dronePov";
 
@@ -30,6 +31,10 @@ export function ScenePostProcessing() {
   const viewMode = useFarmStore((state) => state.viewMode);
   const demoStep = useFarmStore((state) => state.demoStep);
   const scanProgress = useFarmStore((state) => state.scanProgress);
+  // fv-daynight/fv-weather：夜幕与暴雨让状态灯、水面高光更"发光"。
+  const dayPhase = useFarmStore((state) => state.dayPhase);
+  const stormProgress = useFarmStore((state) => state.stormProgress);
+  const bloomIntensity = visualConfig.bloomIntensity + resolveLightingTargets(dayPhase, stormProgress).bloomBoost;
   // Gimbal first-person cut: FPV 窗口内关掉 DOF——无人机回传是深焦画面，
   // 沿用第三人称跟拍的 focus 76 会把 20m 外的地面糊掉。
   const dof = demoStep === "drone-scan" && povCutEngaged(scanProgress) ? null : dofPreset(viewMode, demoStep);
@@ -62,7 +67,7 @@ export function ScenePostProcessing() {
       : []),
     <Bloom
       key="bloom"
-      intensity={visualConfig.bloomIntensity}
+      intensity={bloomIntensity}
       luminanceThreshold={visualConfig.bloomThreshold}
       mipmapBlur
     />,

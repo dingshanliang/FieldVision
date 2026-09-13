@@ -8,6 +8,8 @@ export interface SmartFarmChapterMeta {
   fastDurationMs: number;
   narrationDurationMs: number;
   simulatedConfirmationDelayMs?: number;
+  /** 该章节等待确认的任务（缺省 IRRIGATE-A02，fv-weather 起支持其他任务）。 */
+  confirmationTaskId?: string;
 }
 
 export interface SmartFarmSequenceChapter extends SmartFarmChapterMeta {
@@ -30,6 +32,22 @@ export const SMART_FARM_CHAPTER_META: readonly SmartFarmChapterMeta[] = [
   },
   { id: "irrigation-response", label: "联动供水", outcome: "泵站、闸门与渠道依次联动供水", fastDurationMs: 12_000, narrationDurationMs: 21_000 },
   { id: "outcome-verification", label: "恢复验证", outcome: "连续复测确认 A02 恢复达标", fastDurationMs: 10_000, narrationDurationMs: 17_000 },
+  {
+    id: "weather-front",
+    label: "强对流预警",
+    outcome: "气象预警触发无人机返航与巡检任务安全暂停",
+    fastDurationMs: 12_000,
+    narrationDurationMs: 20_000,
+  },
+  {
+    id: "weather-resume",
+    label: "雨后复业",
+    outcome: "雨势减弱，值守员确认恢复巡检作业",
+    fastDurationMs: 10_000,
+    narrationDurationMs: 16_000,
+    simulatedConfirmationDelayMs: 3_000,
+    confirmationTaskId: "STORM-CHECK",
+  },
   { id: "return-overview", label: "闭环完成", outcome: "设备回库，A02 风险解除，基地持续运行", fastDurationMs: 8_000, narrationDurationMs: 11_000 },
 ] as const;
 

@@ -7,6 +7,7 @@ import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { useFarmStore } from "../state/useFarmStore";
 import { heroIrrigationInlet } from "../data/fields";
 import { visualConfig } from "../config/visual";
+import { STORM_OVERLAY } from "../config/dayNight";
 import { deriveEvidenceState } from "../state/evidenceModel";
 
 interface CropInstancesProps { field: FieldParcel; selected: boolean }
@@ -162,8 +163,13 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
     const mesh = meshRef.current;
     if (!mesh) return;
     const meshMaterial = mesh.material as MeshStandardMaterial;
-    const shader = meshMaterial.userData.shader as { uniforms: { uTime: { value: number } } } | undefined;
-    if (shader) shader.uniforms.uTime.value = clock.elapsedTime;
+    const shader = meshMaterial.userData.shader as { uniforms: { uTime: { value: number }; uWind: { value: number } } } | undefined;
+    if (!shader) return;
+    // fv-photo 冻结：定格时风摆时间停走。fv-weather：暴雨时阵风加成。
+    if (useFarmStore.getState().photoFrozen) return;
+    const storm = useFarmStore.getState().stormProgress;
+    shader.uniforms.uTime.value = clock.elapsedTime;
+    shader.uniforms.uWind.value = visualConfig.windStrength * (1 + STORM_OVERLAY.windBoost * storm);
   });
 
   return (

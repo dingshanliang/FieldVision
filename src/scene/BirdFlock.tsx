@@ -13,6 +13,8 @@ import { useMemo, useRef } from "react";
 import { DoubleSide, Group, MeshBasicMaterial, PlaneGeometry } from "three";
 import { seededRandom } from "../utils/geometry";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
+import { useFarmStore } from "../state/useFarmStore";
+import { currentLighting } from "../config/dayNight";
 
 const TRAVEL_X0 = -175;
 const TRAVEL_X1 = 175;
@@ -78,6 +80,13 @@ export function BirdFlock() {
   useFrame(({ clock }) => {
     const g = groupRef.current;
     if (!g) return;
+    // fv-photo 冻结：定格时鸟群停摆；夜幕/暴雨（作业灯亮起）时归巢隐去。
+    if (useFarmStore.getState().photoFrozen) return;
+    const grounded = currentLighting.nightLights > 0.55;
+    if (grounded) {
+      g.visible = false;
+      return;
+    }
     const tInCycle = clock.elapsedTime % cycle;
     const travelProgress = tInCycle / travelSeconds;
     if (travelProgress > 1) {

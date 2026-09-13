@@ -8,6 +8,7 @@ import { SoundToggle } from "../ui/SoundToggle";
 import { DemoTimeline } from "../ui/DemoTimeline";
 import { FieldDetailPanel } from "../ui/FieldDetailPanel";
 import { LayerSwitcher } from "../ui/LayerSwitcher";
+import { PhotoToolbar } from "../ui/PhotoToolbar";
 import { PresenterControls } from "../ui/PresenterControls";
 import { RemoteConfirmationCard } from "../ui/RemoteConfirmationCard";
 import { TimeCutCard } from "../ui/TimeCutCard";
@@ -137,20 +138,42 @@ function presentMode(): boolean {
   return typeof window !== "undefined" && new URLSearchParams(window.location.search).has("present");
 }
 
+/** 照片模式快捷键（fv-photo）：P 进入/退出，Esc 退出。 */
+function usePhotoModeHotkeys() {
+  const photoMode = useFarmStore((state) => state.photoMode);
+  const setPhotoMode = useFarmStore((state) => state.setPhotoMode);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (event.key === "p" || event.key === "P") {
+        event.preventDefault();
+        setPhotoMode(!useFarmStore.getState().photoMode);
+      } else if (event.key === "Escape" && useFarmStore.getState().photoMode) {
+        setPhotoMode(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setPhotoMode]);
+  return photoMode;
+}
+
 export function App() {
   const present = presentMode();
+  const photoMode = usePhotoModeHotkeys();
   const chapter = useFarmStore((state) => state.smartFarmChapter);
   // fv-66y.22: 2.39:1 letterbox 仅在无人机扫描与恢复验证两拍启用——那是"作为镜头"的强信号。
-  // present 模式也保留（属于电影感画面而非操作层）。
-  const cinematic = chapter === "coordinated-patrol" || chapter === "a02-alert" || chapter === "outcome-verification";
+  // present 模式也保留（属于电影感画面而非操作层）；照片模式强制启用。
+  const cinematic = chapter === "coordinated-patrol" || chapter === "a02-alert" || chapter === "outcome-verification" || photoMode;
   return (
-    <main className={`app-shell${present ? " is-present" : ""}`}>
+    <main className={`app-shell${present ? " is-present" : ""}${photoMode ? " is-photo" : ""}`}>
       <FarmCanvas />
       <AutoDemo />
       {/* 云台 FPV 切入的画面 HUD（自门控：仅 drone-scan 的 POV 窗口内出现） */}
       <DronePovHud />
       <div className={`letterbox${cinematic ? " is-active" : ""}`} aria-hidden="true" />
-      {present ? null : (
+      {present || photoMode ? null : (
         <>
           <TopBar />
           <LayerSwitcher />
@@ -165,6 +188,7 @@ export function App() {
           <div className="canvas-status" aria-live="polite">三维基地已就绪。可选择地块、切换图层或播放完整演示。</div>
         </>
       )}
+      {photoMode && !present && <PhotoToolbar />}
       <PerfHud />
     </main>
   );

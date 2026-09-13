@@ -110,6 +110,7 @@ export function Drone() {
   const following = useFarmStore((state) => state.droneFollowing);
   const demoPlaying = useFarmStore((state) => state.demoPlaying);
   const paused = useFarmStore((state) => state.paused);
+  const photoFrozen = useFarmStore((state) => state.photoFrozen);
   const setFollowing = useFarmStore((state) => state.setDroneFollowing);
   const { scene } = useGLTF("/assets/models/fieldvision-drone.glb");
   const model = useMemo(() => {
@@ -179,7 +180,7 @@ export function Drone() {
 
   useFrame(({ clock }, delta) => {
     if (!group.current) return;
-    if (paused) return;
+    if (paused || photoFrozen) return;
     const time = clock.elapsedTime;
     const scanning = demoStep === "drone-scan";
     // Gimbal first-person cut (fv-66y.6): 镜头切入云台期间隐藏机体与机载灯——
@@ -197,11 +198,13 @@ export function Drone() {
       if (smartFarmChapter === "return-overview") returnStart.current.copy(group.current.position);
       previousChapter.current = smartFarmChapter;
     }
-    if (demoPlaying && !paused) chapterElapsed.current += delta;
+    if (demoPlaying && !paused && !photoFrozen) chapterElapsed.current += delta;
     const completedReturn = smartFarmChapter === "return-overview" && !demoPlaying;
-    const docked = smartFarmChapter === "base-online" || smartFarmChapter === "daily-plan" || smartFarmChapter === "autonomous-operations" || completedReturn;
+    const docked = smartFarmChapter === "base-online" || smartFarmChapter === "daily-plan" || smartFarmChapter === "autonomous-operations"
+      || smartFarmChapter === "weather-resume" || completedReturn;
     const takeoffSequence = smartFarmChapter === "coordinated-patrol" && demoPlaying && chapterElapsed.current < 5;
-    const returning = smartFarmChapter === "return-overview" && demoPlaying;
+    // fv-weather：强对流预警时无人机提前归航（weather-front 播放期间执行回坞）。
+    const returning = (smartFarmChapter === "return-overview" || smartFarmChapter === "weather-front") && demoPlaying;
     let phase: DroneFlightPhase = "airborne";
     let yaw: number;
     let pitch: number;

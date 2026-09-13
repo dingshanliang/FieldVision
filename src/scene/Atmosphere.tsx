@@ -10,7 +10,10 @@ import {
   Color,
   ConeGeometry,
   CylinderGeometry,
+  DirectionalLight,
   DoubleSide,
+  FogExp2,
+  HemisphereLight,
   InstancedMesh,
   Matrix4,
   Mesh,
@@ -18,16 +21,19 @@ import {
   PlaneGeometry,
   Quaternion,
   SRGBColorSpace,
+  ShaderMaterial,
   Vector3,
 } from "three";
 import { visualConfig } from "../config/visual";
+import { currentLighting, lerpCurrentLighting, resolveLightingTargets } from "../config/dayNight";
 import { seededRandom } from "../utils/geometry";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { useFarmStore } from "../state/useFarmStore";
 import { SafePhotographicHorizon } from "./PhotographicHorizon";
 import { BirdFlock } from "./BirdFlock";
+import { NightLights } from "./NightLights";
 
-const sunDirection = new Vector3(...visualConfig.sunDirection).normalize();
+const baseSunDirection = new Vector3(...visualConfig.sunDirection).normalize();
 
 const skyVertexShader = /* glsl */ `
   varying vec3 vDirection;
@@ -37,9 +43,19 @@ const skyVertexShader = /* glsl */ `
   }
 `;
 
+// fv-daynight: 天穹配色全部参数化（清晨/正午/黄昏/夜晚 + 暴雨覆盖），
+// uniform 由 currentLighting 每帧插值写入，着色器结构保持不变。
 const skyFragmentShader = /* glsl */ `
   varying vec3 vDirection;
   uniform vec3 sunDirection;
+  uniform vec3 uZenith;
+  uniform vec3 uHorizon;
+  uniform vec3 uCloudDark;
+  uniform vec3 uCloudLight;
+  uniform vec3 uSunGlow;
+  uniform float uGlowStrength;
+  uniform vec3 uSunDisc;
+  uniform vec3 uHaze;
 
   float fvHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float fvNoise(vec2 p) {
@@ -64,9 +80,7 @@ const skyFragmentShader = /* glsl */ `
     vec3 dir = normalize(vDirection);
     float h = dir.y;
     float vertical = smoothstep(-0.08, 0.72, h);
-    vec3 horizon = vec3(0.67, 0.72, 0.72);
-    vec3 zenith = vec3(0.22, 0.36, 0.52);
-    vec3 sky = mix(horizon, zenith, vertical);
+    vec3 sky = mix(uHorizon, uZenith, vertical);
 
     if (h > 0.015) {
       vec2 projected = dir.xz / (h + 0.24);
@@ -75,26 +89,52 @@ const skyFragmentShader = /* glsl */ `
       float cloud = smoothstep(0.38, 0.58, broad * 0.72 + detail * 0.28);
       float cloudBand = smoothstep(0.02, 0.12, h) * (1.0 - smoothstep(0.5, 0.83, h));
       float underside = smoothstep(0.48, 0.64, broad);
-      vec3 cloudColor = mix(vec3(0.47, 0.52, 0.55), vec3(0.88, 0.88, 0.83), underside);
+      vec3 cloudColor = mix(uCloudDark, uCloudLight, underside);
       sky = mix(sky, cloudColor, cloud * cloudBand * 0.64);
     }
 
     float sunAmount = max(dot(dir, sunDirection), 0.0);
-    sky += vec3(1.0, 0.69, 0.38) * pow(sunAmount, 24.0) * 0.12;
-    sky += vec3(1.0, 0.88, 0.66) * smoothstep(0.99984, 0.99995, sunAmount) * 1.0;
-    sky = mix(sky, vec3(0.31, 0.35, 0.33), smoothstep(0.0, -0.14, h));
+    sky += uSunGlow * pow(sunAmount, 24.0) * uGlowStrength;
+    sky += uSunDisc * smoothstep(0.99984, 0.99995, sunAmount) * 1.0;
+    sky = mix(sky, uHaze, smoothstep(0.0, -0.14, h));
     gl_FragColor = vec4(sky, 1.0);
   }
 `;
 
 function MorningSky() {
   const mesh = useRef<Mesh>(null);
-  const uniforms = useMemo(() => ({ sunDirection: { value: sunDirection.clone() } }), []);
-  useFrame(({ camera }) => mesh.current?.position.copy(camera.position));
+  const materialRef = useRef<ShaderMaterial>(null);
+  const uniforms = useMemo(() => ({
+    sunDirection: { value: baseSunDirection.clone() },
+    uZenith: { value: new Color(...currentLighting.skyZenith) },
+    uHorizon: { value: new Color(...currentLighting.skyHorizon) },
+    uCloudDark: { value: new Color(...currentLighting.skyCloudDark) },
+    uCloudLight: { value: new Color(...currentLighting.skyCloudLight) },
+    uSunGlow: { value: new Color(...currentLighting.sunGlowColor) },
+    uGlowStrength: { value: currentLighting.sunGlowStrength },
+    uSunDisc: { value: new Color(...currentLighting.sunDiscColor) },
+    uHaze: { value: new Color(...currentLighting.skyHaze) },
+  }), []);
+  useFrame(({ camera }) => {
+    mesh.current?.position.copy(camera.position);
+    // 只通过 ref 触达 uniform——渲染作用域捕获的对象不可变（react-hooks 规则）。
+    const uniforms = materialRef.current?.uniforms;
+    if (!uniforms) return;
+    uniforms.sunDirection!.value.set(...currentLighting.sunDirection).normalize();
+    uniforms.uZenith!.value.setRGB(...currentLighting.skyZenith);
+    uniforms.uHorizon!.value.setRGB(...currentLighting.skyHorizon);
+    uniforms.uCloudDark!.value.setRGB(...currentLighting.skyCloudDark);
+    uniforms.uCloudLight!.value.setRGB(...currentLighting.skyCloudLight);
+    uniforms.uSunGlow!.value.setRGB(...currentLighting.sunGlowColor);
+    uniforms.uGlowStrength!.value = currentLighting.sunGlowStrength;
+    uniforms.uSunDisc!.value.setRGB(...currentLighting.sunDiscColor);
+    uniforms.uHaze!.value.setRGB(...currentLighting.skyHaze);
+  });
   return (
     <mesh ref={mesh} scale={1200} renderOrder={-1000} frustumCulled={false}>
       <sphereGeometry args={[1, 64, 36]} />
       <shaderMaterial
+        ref={materialRef}
         side={BackSide}
         depthWrite={false}
         fog={false}
@@ -108,8 +148,111 @@ function MorningSky() {
 
 /** Real rural HDR lighting gives metal, water and leaf surfaces coherent reflections. */
 function GoldenHourEnvironment() {
+  return <Environment files="/assets/environment/rural_landscape_1k.hdr" />;
+}
+
+/**
+ * fv-daynight 控制器：每帧把当前光照向目标（相位 × 暴雨）阻尼插值，并写入
+ * 平行光 / 半球光 / 雾 / HDR 环境强度。照片模式的曝光倍率同时作用于三类光源。
+ * 阴影相机范围随章节镜头由 React props 声明式更新，与逐帧动画互不冲突。
+ */
+function LightingRig({ shadowSize, shadowHorizontal, shadowVertical, castShadow }: {
+  shadowSize: number;
+  shadowHorizontal: number;
+  shadowVertical: number;
+  castShadow: boolean;
+}) {
+  const sunRef = useRef<DirectionalLight>(null);
+  const hemiRef = useRef<HemisphereLight>(null);
+  useFrame((root, delta) => {
+    const farm = useFarmStore.getState();
+    const target = resolveLightingTargets(farm.dayPhase, farm.stormProgress);
+    lerpCurrentLighting(target, 1 - Math.exp(-delta * 2.4));
+    const exposure = farm.photoMode ? farm.photoExposure : 1;
+
+    const sun = sunRef.current;
+    if (sun) {
+      sun.position.set(
+        currentLighting.sunDirection[0] * 260,
+        currentLighting.sunDirection[1] * 260,
+        currentLighting.sunDirection[2] * 260,
+      );
+      sun.intensity = currentLighting.sunIntensity * exposure;
+      sun.color.setRGB(...currentLighting.sunColor, SRGBColorSpace);
+    }
+    const hemi = hemiRef.current;
+    if (hemi) {
+      hemi.intensity = currentLighting.hemiIntensity * exposure;
+      hemi.color.setRGB(...currentLighting.hemiSky, SRGBColorSpace);
+      hemi.groundColor.setRGB(...currentLighting.hemiGround, SRGBColorSpace);
+    }
+    // scene/fog 均取自 useFrame 回调参数（渲染作用域捕获的对象不可变）。
+    const scene = root.scene;
+    if (scene.fog instanceof FogExp2) {
+      // 调色板 hex 是 sRGB 意图——setRGB 必须声明色彩空间，否则被当线性值
+      // 解读，雾会比预期亮近一倍（暴雨天整片中景泛白的根因）。
+      scene.fog.color.setRGB(...currentLighting.fogColor, SRGBColorSpace);
+      scene.fog.density = currentLighting.fogDensity;
+    }
+    // three r163+ 场景级环境强度——HDR IBL 随相位/暴雨/曝光同步缩放。
+    scene.environmentIntensity = currentLighting.envIntensity * exposure;
+  });
   return (
-    <Environment files="/assets/environment/rural_landscape_1k.hdr" environmentIntensity={0.58} />
+    <>
+      {/* Hemisphere dropped from 0.88 → 0.5: the HDRI already provides IBL, and
+          a strong hemi fill was flattening shadow contrast (the "looks plastic /
+          washed-out" symptom). Lower fill restores volumetric depth in canopy
+          gaps, furrows and under eaves. */}
+      <hemisphereLight ref={hemiRef} args={[new Color("#b8cad4"), new Color("#4c4a3b"), 0.5]} />
+      <directionalLight
+        ref={sunRef}
+        position={[baseSunDirection.x * 260, baseSunDirection.y * 260, baseSunDirection.z * 260]}
+        intensity={visualConfig.sunIntensity}
+        color={visualConfig.sunColor}
+        castShadow={castShadow}
+        shadow-mapSize={[shadowSize, shadowSize]}
+        shadow-camera-left={-shadowHorizontal}
+        shadow-camera-right={shadowHorizontal}
+        shadow-camera-top={shadowVertical}
+        shadow-camera-bottom={-shadowVertical}
+        shadow-camera-near={10}
+        shadow-camera-far={720}
+        shadow-bias={-0.00012}
+        shadow-normalBias={0.6}
+      />
+    </>
+  );
+}
+
+/** 夜幕星野：只在上半球铺点，透明度跟随 currentLighting.stars。 */
+function Stars() {
+  const pointsRef = useRef<Points>(null);
+  const geometry = useMemo(() => {
+    const random = seededRandom(4409);
+    const count = 720;
+    const positions = new Float32Array(count * 3);
+    for (let index = 0; index < count; index += 1) {
+      // 均匀取上半球方向，避免在极点附近堆簇。
+      const azimuth = random() * Math.PI * 2;
+      const elevation = Math.asin(random() * 0.96 + 0.04);
+      const radius = 820;
+      positions[index * 3] = Math.cos(elevation) * Math.cos(azimuth) * radius;
+      positions[index * 3 + 1] = Math.sin(elevation) * radius + 20;
+      positions[index * 3 + 2] = Math.cos(elevation) * Math.sin(azimuth) * radius;
+    }
+    const result = new BufferGeometry();
+    result.setAttribute("position", new BufferAttribute(positions, 3));
+    return result;
+  }, []);
+  useFrame(() => {
+    const material = pointsRef.current?.material as { opacity: number } | undefined;
+    if (material) material.opacity = currentLighting.stars;
+    if (pointsRef.current) pointsRef.current.visible = currentLighting.stars > 0.02;
+  });
+  return (
+    <points ref={pointsRef} geometry={geometry} frustumCulled={false} renderOrder={-990}>
+      <pointsMaterial color="#cfe0ff" size={1.6} sizeAttenuation={false} transparent opacity={0} depthWrite={false} fog={false} blending={AdditiveBlending} />
+    </points>
   );
 }
 
@@ -307,8 +450,12 @@ function DustMotes({ count }: { count: number }) {
   }, [count]);
 
   useFrame(({ clock }) => {
+    // fv-photo 冻结：照片模式定格时尘埃停摆；雨夜/黑夜尘埃隐去。
+    if (useFarmStore.getState().photoFrozen) return;
+    const hidden = currentLighting.stars > 0.45 || currentLighting.nightLights > 0.6;
+    if (pointsRef.current) pointsRef.current.visible = !hidden;
     const positions = pointsRef.current?.geometry.attributes.position;
-    if (!positions) return;
+    if (!positions || hidden) return;
     const time = clock.elapsedTime;
     seeds.forEach((mote, index) => {
       positions.setXYZ(
@@ -349,29 +496,17 @@ export function Atmosphere() {
       <fogExp2 attach="fog" args={[visualConfig.fogColor, visualConfig.fogDensity]} />
       <MorningSky />
       <GoldenHourEnvironment />
-      {/* Hemisphere dropped from 0.88 → 0.5: the HDRI already provides IBL, and
-          a strong hemi fill was flattening shadow contrast (the "looks plastic /
-          washed-out" symptom). Lower fill restores volumetric depth in canopy
-          gaps, furrows and under eaves. */}
-      <hemisphereLight args={[new Color("#b8cad4"), new Color("#4c4a3b"), 0.5]} />
-      <directionalLight
-        position={[sunDirection.x * 260, sunDirection.y * 260, sunDirection.z * 260]}
-        intensity={visualConfig.sunIntensity}
-        color={visualConfig.sunColor}
+      <LightingRig
+        shadowSize={shadowSize}
+        shadowHorizontal={shadowHorizontal}
+        shadowVertical={shadowVertical}
         castShadow={tier !== "low"}
-        shadow-mapSize={[shadowSize, shadowSize]}
-        shadow-camera-left={-shadowHorizontal}
-        shadow-camera-right={shadowHorizontal}
-        shadow-camera-top={shadowVertical}
-        shadow-camera-bottom={-shadowVertical}
-        shadow-camera-near={10}
-        shadow-camera-far={720}
-        shadow-bias={-0.00012}
-        shadow-normalBias={0.6}
       />
+      <Stars />
       <SafePhotographicHorizon fallback={<TreeLine />} />
       {tier !== "low" && <BirdFlock />}
       {tier !== "low" && <DustMotes count={tier === "high" ? 240 : 130} />}
+      <NightLights tier={tier} />
     </>
   );
 }

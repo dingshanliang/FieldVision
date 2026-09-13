@@ -19,10 +19,10 @@ function wait(milliseconds: number, signal: AbortSignal) {
   });
 }
 
-function waitForPresenterConfirmation(signal: AbortSignal) {
+function waitForPresenterConfirmation(signal: AbortSignal, taskId: string) {
   return new Promise<void>((resolve, reject) => {
     const unsubscribe = useFarmStore.subscribe((state) => {
-      if (state.tasks["IRRIGATE-A02"]?.status !== "awaiting-confirmation") {
+      if (state.tasks[taskId]?.status !== "awaiting-confirmation") {
         unsubscribe();
         resolve();
       }
@@ -91,22 +91,45 @@ export function useDemoSequence() {
       for (const chapter of plan) {
         if (!commitIfActive(controller, () => store.getState().applySmartFarmChapter(chapter.id))) break;
         let elapsed = 0;
+        const confirmationTaskId = chapter.confirmationTaskId ?? "IRRIGATE-A02";
 
         if (chapter.simulatedConfirmationDelayMs && (options?.confirmationMode ?? (state.pacing === "narration" ? "presenter" : "simulated")) === "presenter") {
           commitIfActive(controller, () => store.getState().setConfirmationCountdown(null));
-          await waitForPresenterConfirmation(controller.signal);
+          await waitForPresenterConfirmation(controller.signal, confirmationTaskId);
         } else if (chapter.simulatedConfirmationDelayMs) {
           const countdownSeconds = Math.ceil(chapter.simulatedConfirmationDelayMs / 1_000);
           commitIfActive(controller, () => store.getState().setConfirmationCountdown(countdownSeconds));
           for (let remaining = countdownSeconds; remaining > 0; remaining -= 1) {
             await wait(1_000, controller.signal);
             elapsed += 1_000;
-            const task = store.getState().tasks["IRRIGATE-A02"];
+            const task = store.getState().tasks[confirmationTaskId];
             if (task?.status !== "awaiting-confirmation") break;
             commitIfActive(controller, () => store.getState().setConfirmationCountdown(remaining - 1));
           }
-          if (store.getState().tasks["IRRIGATE-A02"]?.status === "awaiting-confirmation") {
-            commitIfActive(controller, () => store.getState().confirmTaskForDemo("IRRIGATE-A02", "simulated-autoplay"));
+          if (store.getState().tasks[confirmationTaskId]?.status === "awaiting-confirmation") {
+            commitIfActive(controller, () => store.getState().confirmTaskForDemo(confirmationTaskId, "simulated-autoplay"));
+          }
+        }
+
+        if (chapter.id === "weather-front") {
+          // fv-weather：暴雨从无到峰值在章节内推进（云层压暗 → 雨幕 → 全景变灰）。
+          const slices = 6;
+          commitIfActive(controller, () => store.getState().setStormProgress(0));
+          for (let index = 1; index <= slices; index += 1) {
+            await wait(chapter.durationMs / slices, controller.signal);
+            elapsed += chapter.durationMs / slices;
+            commitIfActive(controller, () => store.getState().setStormProgress(index / slices));
+          }
+        }
+
+        if (chapter.id === "weather-resume") {
+          // fv-weather：雨势减弱但不立停——快照保留 0.45 的余雨，回总览才放晴。
+          const slices = 4;
+          commitIfActive(controller, () => store.getState().setStormProgress(1));
+          for (let index = 1; index <= slices; index += 1) {
+            await wait(chapter.durationMs / slices, controller.signal);
+            elapsed += chapter.durationMs / slices;
+            commitIfActive(controller, () => store.getState().setStormProgress(1 - (0.55 * index) / slices));
           }
         }
 

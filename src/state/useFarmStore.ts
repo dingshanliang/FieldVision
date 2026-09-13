@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { DemoStep, FieldStatus, LayerMode, ViewMode } from "../types/farm";
+import type { DayPhase, DemoStep, FieldStatus, LayerMode, ViewMode } from "../types/farm";
 import {
   advanceTaskProgress as deriveTaskProgress,
   confirmTask,
@@ -47,6 +47,16 @@ interface FarmState {
   timeCut: TimeCut | null;
   droneFollowing: boolean;
   fieldStatuses: Record<string, FieldStatus>;
+  /** 日夜循环时间相位（fv-daynight）；resetDemo 回到清晨。 */
+  dayPhase: DayPhase;
+  /** 暴雨进度 0（无雨）→ 1（强对流峰值），由天气章节与快照驱动。 */
+  stormProgress: number;
+  /** 照片模式（fv-photo）：纯净画面 + 冻结 + 曝光/焦距 + PNG 导出。 */
+  photoMode: boolean;
+  photoFrozen: boolean;
+  photoExposure: number;
+  photoFov: number | null;
+  photoCaptureTick: number;
   selectField: (id: string | null) => void;
   setHoveredField: (id: string | null) => void;
   setViewMode: (mode: ViewMode) => void;
@@ -62,6 +72,13 @@ interface FarmState {
   setTimeCut: (cut: TimeCut | null) => void;
   setDroneFollowing: (following: boolean) => void;
   setFieldStatus: (id: string, status: FieldStatus) => void;
+  setDayPhase: (phase: DayPhase) => void;
+  setStormProgress: (progress: number) => void;
+  setPhotoMode: (enabled: boolean) => void;
+  setPhotoFrozen: (frozen: boolean) => void;
+  setPhotoExposure: (exposure: number) => void;
+  setPhotoFov: (fov: number | null) => void;
+  requestPhotoCapture: () => void;
   applySmartFarmChapter: (chapter: SmartFarmChapter) => void;
   setConfirmationCountdown: (seconds: number | null) => void;
   confirmTaskForDemo: (taskId: string, source: InteractiveConfirmationSource) => void;
@@ -97,6 +114,13 @@ export const useFarmStore = create<FarmState>((set) => ({
   timeCut: null,
   droneFollowing: false,
   fieldStatuses: initialStatuses,
+  dayPhase: "dawn",
+  stormProgress: 0,
+  photoMode: false,
+  photoFrozen: false,
+  photoExposure: 1,
+  photoFov: null,
+  photoCaptureTick: 0,
   selectField: (selectedFieldId) => set({ selectedFieldId }),
   setHoveredField: (hoveredFieldId) => set({ hoveredFieldId }),
   setViewMode: (viewMode) => set({ viewMode }),
@@ -112,6 +136,13 @@ export const useFarmStore = create<FarmState>((set) => ({
   setTimeCut: (timeCut) => set({ timeCut }),
   setDroneFollowing: (droneFollowing) => set({ droneFollowing }),
   setFieldStatus: (id, status) => set((state) => ({ fieldStatuses: { ...state.fieldStatuses, [id]: status } })),
+  setDayPhase: (dayPhase) => set({ dayPhase }),
+  setStormProgress: (progress) => set({ stormProgress: Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0 }),
+  setPhotoMode: (photoMode) => set({ photoMode, photoFrozen: false, photoExposure: 1, photoFov: null }),
+  setPhotoFrozen: (photoFrozen) => set({ photoFrozen }),
+  setPhotoExposure: (photoExposure) => set({ photoExposure: Number.isFinite(photoExposure) ? Math.min(1.7, Math.max(0.55, photoExposure)) : 1 }),
+  setPhotoFov: (photoFov) => set({ photoFov }),
+  requestPhotoCapture: () => set((state) => ({ photoCaptureTick: state.photoCaptureTick + 1 })),
   applySmartFarmChapter: (smartFarmChapter) => set((state) => {
     const snapshot = getSmartFarmChapterSnapshot(smartFarmChapter);
     const previousWaterTask = state.tasks["IRRIGATE-A02"];
@@ -142,6 +173,7 @@ export const useFarmStore = create<FarmState>((set) => ({
       irrigationProgress: snapshot.irrigationProgress,
       scanProgress: snapshot.scanProgress,
       recoveryPhase: snapshot.recoveryPhase,
+      stormProgress: snapshot.stormProgress ?? 0,
       timeCut: null,
       droneFollowing: false,
       fieldStatuses: { ...state.fieldStatuses, A02: snapshot.fieldStatus },
@@ -203,6 +235,8 @@ export const useFarmStore = create<FarmState>((set) => ({
       irrigationProgress: 0,
       scanProgress: 0,
       recoveryPhase: "none",
+      stormProgress: 0,
+      dayPhase: "dawn",
       timeCut: null,
       droneFollowing: false,
       fieldStatuses: { ...initialStatuses },

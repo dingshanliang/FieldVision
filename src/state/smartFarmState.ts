@@ -20,6 +20,8 @@ export const SMART_FARM_CHAPTERS = [
   "remote-decision",
   "irrigation-response",
   "outcome-verification",
+  "weather-front",
+  "weather-resume",
   "return-overview",
 ] as const;
 
@@ -38,6 +40,8 @@ export interface SmartFarmChapterSnapshot extends DemoStatePreset {
   chapter: SmartFarmChapter;
   tasks: Record<string, AutonomousTaskRecord>;
   dailyOperationPlan: DailyOperationPlan;
+  /** 章节进入时的暴雨强度（0 晴 → 1 强对流峰值），直跳与播放共用（fv-weather）。 */
+  stormProgress: number;
 }
 
 const ROUTINE_TASK_IDS = ["SOW-B03", "PATROL-A03", "MAINT-EAST"] as const;
@@ -198,6 +202,43 @@ function taskStateForChapter(chapter: SmartFarmChapter) {
   }
   if (chapter === "outcome-verification") return tasks;
 
+  // fv-weather：复核当日午后强对流过境。雨后巡检任务（观测性质）在授权窗口内
+  // 起飞，随即因雷电安全阈值触发 Task Exception——只有 STORM-CHECK 停机，
+  // 已 verified 的历史任务不受影响（异常仅沿操作依赖传播）。
+  const stormCheck = confirmTask(createPlannedTask({
+    id: "STORM-CHECK",
+    kind: "inspection",
+    targetId: "BASE-WIDE",
+    equipmentId: "UAV-01",
+    equipmentLabel: "多光谱无人机",
+    routeId: "POST-STORM-PERIMETER",
+    objective: "雨后全基地设施与苗情巡检复核",
+    expectedDurationMinutes: 26,
+    safetyBoundaryLabel: "基地巡检走廊",
+    parametersVersion: 1,
+    safetyBoundaryVersion: 1,
+  }), "demo-preset", "2026-06-06T14:02:00+08:00");
+  tasks["STORM-CHECK"] = advanceTaskProgress(stormCheck, 0.25);
+
+  if (chapter === "weather-front") {
+    tasks = raiseTaskException(tasks, "STORM-CHECK", {
+      code: "LIGHTNING_HOLD",
+      message: "雷电预警：云层放电概率超安全阈值，无人机返航避让",
+      at: "2026-06-06T14:08:00+08:00",
+    });
+    return tasks;
+  }
+
+  // 雨势减弱：值守员确认恢复（快照用 demo-preset 溯源，播放时由确认卡覆写）。
+  const resumed = tasks["STORM-CHECK"];
+  if (resumed) {
+    tasks["STORM-CHECK"] = advanceTaskProgress(
+      confirmTask(resumed, "demo-preset", "2026-06-06T14:46:00+08:00"),
+      0.55,
+    );
+  }
+  if (chapter === "weather-resume") return tasks;
+
   Object.values(tasks).forEach((task) => {
     if (task.status === "verified") return;
     const completed = completeTask(task, {
@@ -227,6 +268,13 @@ function legacyPresetForChapter(chapter: SmartFarmChapter) {
   return getDemoStatePreset("overview");
 }
 
+/** fv-weather：章节进入时的暴雨强度基线（播放时会在章节内重新推演）。 */
+function stormForChapter(chapter: SmartFarmChapter): number {
+  if (chapter === "weather-front") return 1;
+  if (chapter === "weather-resume") return 0.45;
+  return 0;
+}
+
 export function getSmartFarmChapterSnapshot(chapter: SmartFarmChapter): SmartFarmChapterSnapshot {
   const visual = legacyPresetForChapter(chapter);
   return {
@@ -234,5 +282,6 @@ export function getSmartFarmChapterSnapshot(chapter: SmartFarmChapter): SmartFar
     chapter,
     tasks: taskStateForChapter(chapter),
     dailyOperationPlan: plan(chapter === "base-online" ? "draft" : chapter === "return-overview" ? "completed" : "confirmed"),
+    stormProgress: stormForChapter(chapter),
   };
 }

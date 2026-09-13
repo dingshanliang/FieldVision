@@ -2,6 +2,8 @@ export type ViewMode = "overview" | "field-aerial" | "field-ground" | "drone-fol
 export type LayerMode = "natural" | "growth" | "moisture" | "facility";
 export type DemoStep = "intro" | "overview" | "select-field" | "inspect-risk" | "drone-scan" | "irrigation" | "recovered";
 export type FieldStatus = "normal" | "attention" | "risk" | "processing" | "recovered";
+/** 日夜循环时间相位（fv-daynight）：清晨为演示默认，夜晚点亮基地灯光。 */
+export type DayPhase = "dawn" | "day" | "dusk" | "night";
 export type Vec3Tuple = [number, number, number];
 
 export interface CameraPreset {

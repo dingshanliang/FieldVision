@@ -10,6 +10,8 @@ import { IrrigationNetwork } from "./IrrigationNetwork";
 import { IrrigationTelemetry } from "./IrrigationTelemetry";
 import { EvidenceMap } from "./EvidenceMap";
 import { SpatialEvidence } from "./SpatialEvidence";
+import { Rain } from "./Rain";
+import { PhotoModeBridge } from "./PhotoModeBridge";
 import { Terrain } from "./Terrain";
 import { GroundDetails } from "./GroundDetails";
 import { HeroAssets } from "./HeroAssets";
@@ -44,6 +46,7 @@ export function FarmScene() {
   return (
     <>
       <Atmosphere />
+      <Rain />
       <group onPointerMissed={() => applyDemoState("overview")}>
         <Terrain />
         <GroundDetails />
@@ -61,6 +64,7 @@ export function FarmScene() {
         <SpatialEvidence />
       </group>
       <CameraDirector />
+      <PhotoModeBridge />
       {perf && <PerfProbe />}
       {qaProbe && <QaSceneProbe />}
       {tier !== "low" && postProcessingReady ? (

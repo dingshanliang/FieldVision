@@ -3,21 +3,39 @@ import { SMART_FARM_CHAPTERS, getSmartFarmChapterSnapshot } from "./smartFarmSta
 import { useFarmStore } from "./useFarmStore";
 
 describe("smart farm canonical chapter snapshots", () => {
-  it("defines one complete deterministic snapshot for all nine chapters", () => {
-    expect(SMART_FARM_CHAPTERS).toHaveLength(9);
+  it("defines one complete deterministic snapshot for all eleven chapters", () => {
+    expect(SMART_FARM_CHAPTERS).toHaveLength(11);
 
     const snapshots = SMART_FARM_CHAPTERS.map(getSmartFarmChapterSnapshot);
     expect(snapshots.map((snapshot) => snapshot.chapter)).toEqual(SMART_FARM_CHAPTERS);
     snapshots.forEach((snapshot) => {
-      expect(Object.keys(snapshot.tasks)).toEqual([
-        "SOW-B03",
-        "PATROL-A03",
-        "MAINT-EAST",
-        "UAV-A02",
-        "IRRIGATE-A02",
-      ]);
+      // 天气章节及其后的闭环章节会多出 STORM-CHECK（fv-weather 雨后巡检）。
+      const expectedTasks = ["SOW-B03", "PATROL-A03", "MAINT-EAST", "UAV-A02", "IRRIGATE-A02"];
+      if (["weather-front", "weather-resume", "return-overview"].includes(snapshot.chapter)) {
+        expectedTasks.push("STORM-CHECK");
+      }
+      expect(Object.keys(snapshot.tasks)).toEqual(expectedTasks);
       expect(snapshot.dailyOperationPlan.taskIds).toEqual(["SOW-B03", "PATROL-A03", "MAINT-EAST"]);
     });
+  });
+
+  it("holds only the post-storm survey while lightning crosses the safety threshold", () => {
+    const front = getSmartFarmChapterSnapshot("weather-front");
+    expect(front.stormProgress).toBe(1);
+    expect(front.tasks["STORM-CHECK"]).toMatchObject({
+      status: "exception",
+      exception: { code: "LIGHTNING_HOLD" },
+    });
+    // 已 verified 的历史任务不受影响——异常只沿操作依赖传播。
+    expect(front.tasks["IRRIGATE-A02"]?.status).toBe("verified");
+
+    const resume = getSmartFarmChapterSnapshot("weather-resume");
+    expect(resume.stormProgress).toBe(0.45);
+    expect(resume.tasks["STORM-CHECK"]).toMatchObject({ status: "running", exception: null });
+
+    const overview = getSmartFarmChapterSnapshot("return-overview");
+    expect(overview.stormProgress).toBe(0);
+    expect(overview.tasks["STORM-CHECK"]?.status).toBe("verified");
   });
 
   it("keeps A02 irrigation outside the daily plan and independently confirmed", () => {

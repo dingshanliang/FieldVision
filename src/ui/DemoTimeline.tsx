@@ -49,8 +49,8 @@ export function DemoTimeline() {
           <button type="button" className="play-demo" onClick={() => void play()}><Play size={15} fill="currentColor" />播放完整演示</button>
         )}
         <div className="pacing-toggle" role="group" aria-label="演示节奏">
-          <button type="button" className={pacing === "fast" ? "is-active" : ""} onClick={() => setPacing("fast")}>精简 90 秒</button>
-          <button type="button" className={pacing === "narration" ? "is-active" : ""} onClick={() => setPacing("narration")}>讲解 150 秒</button>
+          <button type="button" className={pacing === "fast" ? "is-active" : ""} onClick={() => setPacing("fast")}>精简 112 秒</button>
+          <button type="button" className={pacing === "narration" ? "is-active" : ""} onClick={() => setPacing("narration")}>讲解 186 秒</button>
         </div>
       </div>
       <div className="timeline-track">

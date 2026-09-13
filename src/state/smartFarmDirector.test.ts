@@ -7,15 +7,15 @@ import {
 } from "./smartFarmDirector";
 
 describe("smart farm director plan", () => {
-  it("uses the same nine canonical chapters for both pacing modes", () => {
+  it("uses the same eleven canonical chapters for both pacing modes", () => {
     expect(SMART_FARM_CHAPTER_META.map((chapter) => chapter.id)).toEqual(SMART_FARM_CHAPTERS);
     expect(createSmartFarmSequencePlan("fast").map((chapter) => chapter.id)).toEqual(SMART_FARM_CHAPTERS);
     expect(createSmartFarmSequencePlan("narration").map((chapter) => chapter.id)).toEqual(SMART_FARM_CHAPTERS);
   });
 
-  it("keeps the complete story at exactly 90 and 150 seconds", () => {
-    expect(smartFarmSequenceDuration("fast")).toBe(90_000);
-    expect(smartFarmSequenceDuration("narration")).toBe(150_000);
+  it("keeps the complete story at exactly 112 and 186 seconds", () => {
+    expect(smartFarmSequenceDuration("fast")).toBe(112_000);
+    expect(smartFarmSequenceDuration("narration")).toBe(186_000);
   });
 
   it("reserves the visible simulated confirmation inside the decision chapter", () => {
@@ -23,6 +23,14 @@ describe("smart farm director plan", () => {
     expect(decision).toMatchObject({
       durationMs: 10_000,
       simulatedConfirmationDelayMs: 3_000,
+    });
+  });
+
+  it("routes the weather-resume confirmation to the post-storm survey task", () => {
+    const resume = createSmartFarmSequencePlan("fast").find((chapter) => chapter.id === "weather-resume");
+    expect(resume).toMatchObject({
+      simulatedConfirmationDelayMs: 3_000,
+      confirmationTaskId: "STORM-CHECK",
     });
   });
 });

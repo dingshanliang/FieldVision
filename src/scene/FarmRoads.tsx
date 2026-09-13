@@ -1,14 +1,18 @@
-import { useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useMemo, useRef } from "react";
 import {
   BufferGeometry,
   CanvasTexture,
   CatmullRomCurve3,
+  Color,
   Float32BufferAttribute,
+  MeshStandardMaterial,
   RepeatWrapping,
   SRGBColorSpace,
   Vector3,
 } from "three";
 import { roadPaths } from "../data/farmRoads";
+import { useFarmStore } from "../state/useFarmStore";
 
 /**
  * Farm track network: a ring road around the field blocks plus a short spur
@@ -87,18 +91,30 @@ function makeRoadTexture() {
 export function FarmRoads() {
   const geometries = useMemo(() => roadPaths.map(({ points, width }) => createRoadGeometry(points, width)), []);
   const texture = useMemo(() => makeRoadTexture(), []);
+  const material = useMemo(() => new MeshStandardMaterial({
+    map: texture,
+    roughness: 0.98,
+    metalness: 0,
+    envMapIntensity: 0.2,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  }), [texture]);
+  const materialRef = useRef<MeshStandardMaterial>(null);
+  // fv-weather：雨水浸湿路面——压深颜色、降低粗糙度（车辙积水反光）。
+  const wetTint = useMemo(() => new Color(0.58, 0.62, 0.66), []);
+  const dryColor = useMemo(() => new Color(1, 1, 1), []);
+  useFrame(() => {
+    const roadMaterial = materialRef.current;
+    if (!roadMaterial) return;
+    const storm = useFarmStore.getState().stormProgress;
+    roadMaterial.color.copy(dryColor).lerp(wetTint, storm);
+    roadMaterial.roughness = 0.98 - storm * 0.32;
+  });
   return (
     <group>
       {geometries.map((geometry, index) => (
         <mesh key={index} geometry={geometry} receiveShadow>
-          <meshStandardMaterial
-            map={texture}
-            roughness={0.98}
-            metalness={0}
-            envMapIntensity={0.2}
-            polygonOffset
-            polygonOffsetFactor={-1}
-          />
+          <primitive object={material} attach="material" ref={index === 0 ? materialRef : undefined} />
         </mesh>
       ))}
     </group>

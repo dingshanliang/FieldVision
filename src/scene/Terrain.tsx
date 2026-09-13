@@ -1,8 +1,10 @@
 import { useKtx2 } from "./ktx2Loader";
-import { useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useMemo, useRef } from "react";
 import {
   BufferAttribute,
   Color,
+  MeshStandardMaterial,
   PlaneGeometry,
   RepeatWrapping,
   SRGBColorSpace,
@@ -10,6 +12,7 @@ import {
   Vector2,
 } from "three";
 import { fbm2D } from "../utils/noise";
+import { useFarmStore } from "../state/useFarmStore";
 
 function smoothstep(edge0: number, edge1: number, x: number) {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
@@ -31,6 +34,10 @@ function terrainHeightAt(x: number, z: number) {
 }
 
 export function Terrain() {
+  const materialRef = useRef<MeshStandardMaterial>(null);
+  // fv-weather：暴雨时地面被淋湿——颜色压深、粗糙度降低（湿土反光）。
+  const wetTint = useMemo(() => new Color(0.66, 0.7, 0.68), []);
+  const dryColor = useMemo(() => new Color(1, 1, 1), []);
   const [sourceColor, sourceNormal, sourceRoughness] = useKtx2([
     "/assets/textures/source/Ground026/Ground026_1K-JPG_Color.ktx2",
     "/assets/textures/source/Ground026/Ground026_1K-JPG_NormalGL.ktx2",
@@ -94,10 +101,19 @@ export function Terrain() {
     return result;
   }, []);
 
+  useFrame(() => {
+    const material = materialRef.current;
+    if (!material) return;
+    const storm = useFarmStore.getState().stormProgress;
+    material.color.copy(dryColor).lerp(wetTint, storm);
+    material.roughness = 1 - storm * 0.26;
+  });
+
   return (
     <group>
       <mesh geometry={geometry} receiveShadow>
         <meshStandardMaterial
+          ref={materialRef}
           vertexColors
           map={colorMap}
           normalMap={normalMap}
