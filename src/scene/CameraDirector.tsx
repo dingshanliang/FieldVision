@@ -169,6 +169,10 @@ export function CameraDirector() {
   useEffect(() => {
     const current = controls.current;
     if (!current || !introComplete) return;
+    // 照片模式下用户拥有相机：构图期间不启动任何脚本镜头，否则几秒后
+    // flyTo 会夺走刚构好的图（进照片模式时序列已被 paused 冻结，这里
+    // 防的是手动跳章/选地块等残余触发源）。
+    if (useFarmStore.getState().photoMode) return;
     current.smoothTime = 0.72;
     if (viewMode === "overview" || !selectedFieldId) {
       const machineShot = smartMachineCameraForChapter(smartFarmChapter);
@@ -212,6 +216,10 @@ export function CameraDirector() {
     const current = controls.current;
     if (!current) return;
     if (!useFarmStore.getState().introComplete) return;
+    // 照片模式冻结一切脚本相机运动（含呼吸漂移与跟拍）：17° 长焦下
+    // 0.45m 漂移可见，定格构图不允许被夺走。用户拖动仍由 camera-controls
+    // 直接处理，不受影响。
+    if (useFarmStore.getState().photoMode) return;
     // QA screenshot scripts drive the camera directly — never fight them.
     // Exception: explicit ?pov=cut lets QA screenshot the gimbal cut, and only
     // while the drone-scan beat is actually live inside the POV window.

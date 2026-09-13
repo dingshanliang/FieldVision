@@ -10,7 +10,7 @@
  */
 import type { DemoStep } from "../types/farm";
 
-export type AudioCue = "pump" | "gate" | "channel" | "inlet" | "wetting" | "verified" | "recovered" | "chirp";
+export type AudioCue = "pump" | "gate" | "channel" | "inlet" | "wetting" | "verified" | "recovered" | "chirp" | "shutter";
 
 class AudioEngine {
   private ctx: AudioContext | null = null;
@@ -121,8 +121,26 @@ class AudioEngine {
       source.stop(now + 0.46);
       return;
     }
+    if (cue === "shutter") {
+      // 快门双击：两次高频窄脉冲，模拟反光板/叶片快门的"嗒-嗒"。
+      for (let click = 0; click < 2; click += 1) {
+        const at = now + click * 0.07;
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.type = "square";
+        oscillator.frequency.setValueAtTime(click === 0 ? 1_750 : 1_180, at);
+        oscillator.frequency.exponentialRampToValueAtTime(click === 0 ? 880 : 640, at + 0.045);
+        gain.gain.setValueAtTime(0.0001, at);
+        gain.gain.exponentialRampToValueAtTime(0.075, at + 0.006);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
+        oscillator.connect(gain).connect(master);
+        oscillator.start(at);
+        oscillator.stop(at + 0.12);
+      }
+      return;
+    }
 
-    const tones: Record<Exclude<AudioCue, "channel" | "inlet" | "wetting">, [number, number, OscillatorType]> = {
+    const tones: Record<Exclude<AudioCue, "channel" | "inlet" | "wetting" | "shutter">, [number, number, OscillatorType]> = {
       pump: [62, 118, "sine"],
       gate: [180, 108, "square"],
       verified: [392, 587, "sine"],

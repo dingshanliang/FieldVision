@@ -69,6 +69,7 @@ button { color: inherit; }
 .photo-toolbar > button.is-active { border-color: rgba(99,199,194,.5); color: #dffaf3; background: rgba(47,132,113,.42); }
 .photo-toolbar__exit { margin-right: 2px; }
 .photo-toolbar__shutter { border-color: rgba(99,199,194,.4) !important; color: #dffaf3 !important; background: linear-gradient(90deg, rgba(47,132,113,.5), rgba(38,109,97,.34)) !important; }
+.photo-toolbar__hint { align-self: center; padding: 5px 9px; border: 1px solid rgba(99,199,194,.35); border-radius: 8px; color: #9edfd9; background: rgba(47,132,113,.28); font-size: .6rem; white-space: nowrap; animation: caption-in 320ms cubic-bezier(.2,.8,.2,1) both; }
 .photo-toolbar__slider { display: flex; align-items: center; gap: 7px; padding: 0 4px; font-size: .62rem; color: rgba(230,240,233,.62); }
 .photo-toolbar__slider input[type="range"] { width: 88px; accent-color: #63c7c2; cursor: pointer; }
 .photo-toolbar__slider em { min-width: 44px; font: 600 10px/1 ui-monospace, monospace; font-style: normal; color: #9edfd9; }

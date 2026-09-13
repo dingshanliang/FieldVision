@@ -1,10 +1,12 @@
 import { Bloom, ChromaticAberration, DepthOfField, EffectComposer, N8AO, Noise, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
-import { BlendFunction, ToneMappingMode } from "postprocessing";
+import { BlendFunction, ToneMappingMode, type EffectComposer as EffectComposerImpl } from "postprocessing";
 import { Vector2 } from "three";
+import { useEffect, useRef } from "react";
 import { visualConfig } from "../config/visual";
 import { resolveLightingTargets } from "../config/dayNight";
 import { useFarmStore } from "../state/useFarmStore";
 import { povCutEngaged } from "./dronePov";
+import { sceneComposer } from "./composerBridge";
 
 /** Cinematic shallow focus for the close-up beats; wide shots stay fully sharp. */
 function dofPreset(viewMode: string, demoStep: string) {
@@ -28,6 +30,17 @@ const chromaticOffset = new Vector2(0.00065, 0.00035);
  * the complete medium/high-tier visual stack.
  */
 export function ScenePostProcessing() {
+  const composerRef = useRef<EffectComposerImpl>(null);
+  // Publish the live composer so PhotoModeBridge can render a capture through
+  // the full post chain (P0 export fix). Unmount clears it unless a newer
+  // instance already took the slot (tier switch remounts).
+  useEffect(() => {
+    const composer = composerRef.current;
+    sceneComposer.current = composer;
+    return () => {
+      if (sceneComposer.current === composer) sceneComposer.current = null;
+    };
+  }, []);
   const viewMode = useFarmStore((state) => state.viewMode);
   const demoStep = useFarmStore((state) => state.demoStep);
   const scanProgress = useFarmStore((state) => state.scanProgress);
@@ -88,7 +101,7 @@ export function ScenePostProcessing() {
   // NormalPass stays disabled. DepthOfField is mounted per beat; multisampling
   // stays 0 to avoid Chrome depth/stencil blit errors, with SMAA restoring AA.
   return (
-    <EffectComposer multisampling={0} enableNormalPass={false}>
+    <EffectComposer ref={composerRef} multisampling={0} enableNormalPass={false}>
       {effects}
     </EffectComposer>
   );

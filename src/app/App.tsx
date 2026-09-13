@@ -147,6 +147,9 @@ function usePhotoModeHotkeys() {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (event.key === "p" || event.key === "P") {
+        // 与 TopBar 相机按钮同一门禁：intro 未完成时不进入照片模式，
+        // 否则会把开场字幕和"跳过开场"一起藏掉。
+        if (!useFarmStore.getState().introComplete) return;
         event.preventDefault();
         setPhotoMode(!useFarmStore.getState().photoMode);
       } else if (event.key === "Escape" && useFarmStore.getState().photoMode) {

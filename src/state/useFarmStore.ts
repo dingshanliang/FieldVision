@@ -57,7 +57,12 @@ interface FarmState {
   photoExposure: number;
   photoFov: number | null;
   photoCaptureTick: number;
+  /** 导出 PNG 是否合成 2.39:1 电影黑边（与屏显 letterbox 对齐）。 */
+  photoLetterbox: boolean;
+  /** 进入照片模式前的演示暂停态，退出时恢复（瞬态簿记，非演示状态）。 */
+  photoPriorPaused: boolean;
   selectField: (id: string | null) => void;
+  clearFieldSelection: () => void;
   setHoveredField: (id: string | null) => void;
   setViewMode: (mode: ViewMode) => void;
   setLayerMode: (mode: LayerMode) => void;
@@ -78,6 +83,7 @@ interface FarmState {
   setPhotoFrozen: (frozen: boolean) => void;
   setPhotoExposure: (exposure: number) => void;
   setPhotoFov: (fov: number | null) => void;
+  setPhotoLetterbox: (letterbox: boolean) => void;
   requestPhotoCapture: () => void;
   applySmartFarmChapter: (chapter: SmartFarmChapter) => void;
   setConfirmationCountdown: (seconds: number | null) => void;
@@ -121,7 +127,13 @@ export const useFarmStore = create<FarmState>((set) => ({
   photoExposure: 1,
   photoFov: null,
   photoCaptureTick: 0,
+  photoLetterbox: true,
+  photoPriorPaused: false,
   selectField: (selectedFieldId) => set({ selectedFieldId }),
+  // 点空白（onPointerMissed）只清选区：旧 applyDemoState("overview") 会重置
+  // legacy 演示字段却不写 smartFarmChapter/stormProgress，播放中触发会与
+  // 章节推演互相覆写造成一次状态抖动（双轨泄漏点，fv-p7x 穿帮修复）。
+  clearFieldSelection: () => set({ selectedFieldId: null }),
   setHoveredField: (hoveredFieldId) => set({ hoveredFieldId }),
   setViewMode: (viewMode) => set({ viewMode }),
   setLayerMode: (layerMode) => set({ layerMode }),
@@ -138,10 +150,21 @@ export const useFarmStore = create<FarmState>((set) => ({
   setFieldStatus: (id, status) => set((state) => ({ fieldStatuses: { ...state.fieldStatuses, [id]: status } })),
   setDayPhase: (dayPhase) => set({ dayPhase }),
   setStormProgress: (progress) => set({ stormProgress: Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0 }),
-  setPhotoMode: (photoMode) => set({ photoMode, photoFrozen: false, photoExposure: 1, photoFov: null }),
+  // 进入照片模式即接管演示控制权：复用 paused 冻结章节时间（wait() 已感知），
+  // 不发明第三种暂停态；退出时恢复进入前的暂停态。曝光/焦距/冻结在进出时复位。
+  setPhotoMode: (photoMode) => set((state) => ({
+    photoMode,
+    photoFrozen: false,
+    photoExposure: 1,
+    photoFov: null,
+    ...(photoMode
+      ? { photoPriorPaused: state.paused, paused: true }
+      : { paused: state.photoPriorPaused }),
+  })),
   setPhotoFrozen: (photoFrozen) => set({ photoFrozen }),
   setPhotoExposure: (photoExposure) => set({ photoExposure: Number.isFinite(photoExposure) ? Math.min(1.7, Math.max(0.55, photoExposure)) : 1 }),
   setPhotoFov: (photoFov) => set({ photoFov }),
+  setPhotoLetterbox: (photoLetterbox) => set({ photoLetterbox }),
   requestPhotoCapture: () => set((state) => ({ photoCaptureTick: state.photoCaptureTick + 1 })),
   applySmartFarmChapter: (smartFarmChapter) => set((state) => {
     const snapshot = getSmartFarmChapterSnapshot(smartFarmChapter);

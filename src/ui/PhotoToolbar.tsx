@@ -1,10 +1,15 @@
 /**
- * 照片模式工具条（fv-photo）：纯净画面下的唯一 UI——冻结、曝光、焦距、
- * 快门与退出。曝光作用于场景光源（LightingRig 曝光倍率），焦距作用于
- * 相机 FOV（PhotoModeBridge），导出只含画布内容、不含任何 UI。
+ * 照片模式工具条（fv-photo）：纯净画面下的唯一 UI——冻结、曝光、视角、
+ * 画幅、快门与退出。曝光作用于场景光源（LightingRig 曝光倍率），视角作用
+ * 于相机 FOV（PhotoModeBridge），导出含完整后期链；开启 2.39:1 时导出
+ * PNG 会合成与屏显一致的电影黑边。
  */
-import { Aperture, Camera, Pause, Play, X, ZoomIn } from "lucide-react";
+import { Aperture, Camera, Pause, Play, RectangleHorizontal, X, ZoomIn } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { audioEngine } from "../audio/audioEngine";
 import { useFarmStore } from "../state/useFarmStore";
+
+const DEFAULT_FOV = 45;
 
 export function PhotoToolbar() {
   const photoFrozen = useFarmStore((state) => state.photoFrozen);
@@ -13,8 +18,26 @@ export function PhotoToolbar() {
   const setPhotoExposure = useFarmStore((state) => state.setPhotoExposure);
   const photoFov = useFarmStore((state) => state.photoFov);
   const setPhotoFov = useFarmStore((state) => state.setPhotoFov);
+  const photoLetterbox = useFarmStore((state) => state.photoLetterbox);
+  const setPhotoLetterbox = useFarmStore((state) => state.setPhotoLetterbox);
   const requestPhotoCapture = useFarmStore((state) => state.requestPhotoCapture);
   const setPhotoMode = useFarmStore((state) => state.setPhotoMode);
+  const [savedVisible, setSavedVisible] = useState(false);
+  const savedTimer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (savedTimer.current !== null) window.clearTimeout(savedTimer.current);
+  }, []);
+
+  const onShutter = () => {
+    audioEngine.sfx("shutter");
+    requestPhotoCapture();
+    setSavedVisible(true);
+    if (savedTimer.current !== null) window.clearTimeout(savedTimer.current);
+    savedTimer.current = window.setTimeout(() => setSavedVisible(false), 1_800);
+  };
+
+  const fovValue = photoFov ?? DEFAULT_FOV;
 
   return (
     <div className="photo-toolbar" role="toolbar" aria-label="照片模式工具">
@@ -46,21 +69,31 @@ export function PhotoToolbar() {
       </label>
       <label className="photo-toolbar__slider">
         <ZoomIn size={14} />
-        <span>焦距</span>
+        <span>视角</span>
         <input
           type="range"
           min={22}
           max={70}
           step={1}
-          value={photoFov ? 87 - photoFov : 42}
+          value={87 - fovValue}
           onChange={(event) => setPhotoFov(87 - Number(event.target.value))}
-          aria-label="焦距（视场角）"
+          aria-label="视角（FOV 角度，数值越小镜头越长）"
         />
-        <em>{photoFov ? `${photoFov}°` : "默认"}</em>
+        <em>{fovValue}°</em>
       </label>
-      <button type="button" className="photo-toolbar__shutter" onClick={requestPhotoCapture} title="导出 PNG（仅画面，无 UI）">
+      <button
+        type="button"
+        className={photoLetterbox ? "is-active" : ""}
+        aria-pressed={photoLetterbox}
+        onClick={() => setPhotoLetterbox(!photoLetterbox)}
+        title="导出 PNG 是否合成 2.39:1 电影黑边（与屏显画幅一致）"
+      >
+        <RectangleHorizontal size={15} /> 2.39:1
+      </button>
+      <button type="button" className="photo-toolbar__shutter" onClick={onShutter} title="导出 PNG（含完整后期效果，无 UI）">
         <Camera size={15} /> 快门
       </button>
+      {savedVisible && <span className="photo-toolbar__hint" aria-live="polite">已导出 PNG</span>}
       <small>拖动旋转 · 滚轮缩放 · Esc 退出</small>
     </div>
   );
