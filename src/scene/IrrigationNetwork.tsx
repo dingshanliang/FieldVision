@@ -5,6 +5,8 @@ import {
   BufferGeometry,
   CanvasTexture,
   CatmullRomCurve3,
+  Color,
+  DataTexture,
   DoubleSide,
   Float32BufferAttribute,
   Mesh,
@@ -15,13 +17,19 @@ import {
   SRGBColorSpace,
   Texture,
   Vector3,
+  Vector2,
 } from "three";
+import { Water as Water2 } from "three/examples/jsm/objects/Water2.js";
 import type { WebGLProgramParametersWithUniforms } from "three";
 import { useKtx2 } from "./ktx2Loader";
 import { useFarmStore } from "../state/useFarmStore";
 import { deriveA02Response } from "../state/a02ResponseModel";
 import { deriveIrrigationEvent } from "../state/irrigationEvent";
 import { seededRandom } from "../utils/geometry";
+import { currentLighting } from "../config/dayNight";
+import { generateWaterNormalData, WATER_NORMAL_SIZE } from "./waterNormal";
+import { usePerformanceTier } from "../hooks/usePerformanceTier";
+import type { PerformanceTier } from "../hooks/usePerformanceTier";
 
 const mainPoints = [[82, 1.3, 104], [78, 1.1, 78], [74, 0.8, 43], [70, 0.9, 8], [67, 1.1, -20], [62, 1.2, -44], [54, 1.35, -62]] as const;
 const curve = new CatmullRomCurve3(mainPoints.map(([x, y, z]) => new Vector3(x, y, z)), false, "catmullrom", 0.28);
@@ -204,8 +212,71 @@ function ChannelWater({ path, width, baseLift, fill, rise }: { path: CatmullRomC
   );
 }
 
-function FlowParticles({ path, flowProgress, pulseProgress, count = 42, size = 0.44, lift = -0.1 }: { path: CatmullRomCurve3; flowProgress: number; pulseProgress: number; count?: number; size?: number; lift?: number }) {
-  const pointsRef = useRef<Points>(null);
+/** fv-2zv：水面基色（与渠水绿一致），向 currentLighting.fogColor 混合后随昼夜/暴雨压暗。 */
+const WATER_BASE_COLOR = new Color("#557b70");
+const scratchWaterColor = new Color();
+const scratchFogColor = new Color();
+
+/**
+ * 中/高档渠道水面（fv-2zv）：three 官方 Water2——真实场景反射/折射 +
+ * 程序化平铺法线交叉流动。夜章泵站泛光会真实映在水面（反射 pass 渲染
+ * 整个场景）。每实例每帧 2 次额外场景渲染是核心成本：high 512 RT、
+ * medium 256 RT；低档不挂本组件（保留 SimpleChannelWater）。
+ */
+function Water2ChannelWater({ path, width, baseLift, fill, rise, tier, flowDirection, normalScale }: {
+  path: CatmullRomCurve3;
+  width: number;
+  baseLift: number;
+  fill: number;
+  rise: number;
+  tier: PerformanceTier;
+  flowDirection: readonly [number, number];
+  normalScale: number;
+}) {
+  const geometry = useMemo(() => createRibbon(path, width, 0, 10), [path, width]);
+  const water = useMemo(() => {
+    const makeNormal = (seed: number) => {
+      const texture = new DataTexture(generateWaterNormalData(seed), WATER_NORMAL_SIZE, WATER_NORMAL_SIZE);
+      texture.wrapS = RepeatWrapping;
+      texture.wrapT = RepeatWrapping;
+      texture.needsUpdate = true;
+      return texture;
+    };
+    const result = new Water2(geometry, {
+      textureWidth: tier === "high" ? 512 : 256,
+      textureHeight: tier === "high" ? 512 : 256,
+      normalMap0: makeNormal(4409),
+      normalMap1: makeNormal(7717),
+      flowDirection: new Vector2(flowDirection[0], flowDirection[1]),
+      flowSpeed: 0.05 + fill * 0.1,
+      reflectivity: 0.5,
+      scale: normalScale,
+    });
+    result.material.polygonOffset = true;
+    result.material.polygonOffsetFactor = -1;
+    return result;
+    // fill 只影响构造期流速初值；运行期由 useFrame 驱动抬升，重建无必要。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geometry, tier, flowDirection, normalScale]);
+  const waterRef = useRef<Water2>(null);
+
+  useFrame((_, delta) => {
+    const mesh = waterRef.current;
+    if (!mesh) return;
+    if (useFarmStore.getState().photoFrozen) return;
+    // 水色跟随光照单一事实源，但基色主导（35% fogColor）：夜间若让雾色
+    // 占大头会把反射/折射整体压成黑带，水面失去可读性。
+    const material = mesh.material as unknown as { uniforms: { color: { value: Color } } };
+    scratchWaterColor.copy(WATER_BASE_COLOR);
+    scratchWaterColor.lerp(scratchFogColor.setRGB(...currentLighting.fogColor, SRGBColorSpace), 0.35);
+    material.uniforms.color.value.lerp(scratchWaterColor, 1 - Math.exp(-delta * 2.4));
+    mesh.position.y = baseLift + fill * rise;
+  });
+
+  return <primitive ref={waterRef} object={water} receiveShadow />;
+}
+
+function FlowParticles({ path, flowProgress, pulseProgress, count = 42, size = 0.44, lift = -0.1 }: { path: CatmullRomCurve3; flowProgress: number; pulseProgress: number; count?: number; size?: number; lift?: number }) {  const pointsRef = useRef<Points>(null);
   const materialRef = useRef<PointsMaterial>(null);
   const geometry = useMemo(() => {
     const result = new BufferGeometry();
@@ -358,6 +429,7 @@ function WaterMist({ name, position, strength, count = 26, spread = 1 }: { name:
 }
 
 export function IrrigationNetwork() {
+  const tier = usePerformanceTier();
   const requestedProgress = useFarmStore((state) => state.irrigationProgress);
   const task = useFarmStore((state) => state.tasks["IRRIGATE-A02"]);
   const recoveryPhase = useFarmStore((state) => state.recoveryPhase);
@@ -383,8 +455,26 @@ export function IrrigationNetwork() {
       <mesh geometry={branchLining} receiveShadow>
         <meshStandardMaterial color="#7b7a70" map={concreteColor} normalMap={concreteNormal} roughnessMap={concreteRoughness} roughness={0.95} metalness={0} envMapIntensity={0.22} side={DoubleSide} />
       </mesh>
-      <ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} />
-      <ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} />
+      {tier === "high" ? (
+        <>
+          {/* 沿渠 uv（v 轴）流动；支渠略带横向分量制造汇入感。 */}
+          <Water2ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} tier={tier} flowDirection={[0.12, 1]} normalScale={1.2} />
+          <Water2ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} tier={tier} flowDirection={[0.28, 0.96]} normalScale={1.1} />
+        </>
+      ) : tier === "medium" ? (
+        <>
+          {/* 中档性能门（fv-2zv）：Water2 每实例每帧 2 次额外场景渲染，双渠
+              同开在软件渲染实测掉到 ~32fps。第 7 章机位只看到东支渠——只给
+              支渠上 Water2，主渠保旧水面，成本减半保住关键镜头。 */}
+          <ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} />
+          <Water2ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} tier={tier} flowDirection={[0.28, 0.96]} normalScale={1.1} />
+        </>
+      ) : (
+        <>
+          <ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} />
+          <ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} />
+        </>
+      )}
       <FlowParticles path={curve} flowProgress={event.mainChannelProgress} pulseProgress={event.inletProgress} />
       {/* East branch actually delivers water to A02 — its flow cue must read as
           strongly as the main canal, not just an opacity change on the surface. */}
