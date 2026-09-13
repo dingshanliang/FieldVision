@@ -243,8 +243,10 @@ function Water2ChannelWater({ path, width, baseLift, fill, rise, tier, flowDirec
       return texture;
     };
     const result = new Water2(geometry, {
-      textureWidth: tier === "high" ? 512 : 256,
-      textureHeight: tier === "high" ? 512 : 256,
+      // 性能门（fv-2zv）：512 RT 在软件渲染实测把高档拖到 ~17fps；两档统一
+      // 256 RT，反射细节靠法线与流速保住（真机 GPU 上 256 已绰绰有余）。
+      textureWidth: 256,
+      textureHeight: 256,
       normalMap0: makeNormal(4409),
       normalMap1: makeNormal(7717),
       flowDirection: new Vector2(flowDirection[0], flowDirection[1]),
@@ -455,24 +457,18 @@ export function IrrigationNetwork() {
       <mesh geometry={branchLining} receiveShadow>
         <meshStandardMaterial color="#7b7a70" map={concreteColor} normalMap={concreteNormal} roughnessMap={concreteRoughness} roughness={0.95} metalness={0} envMapIntensity={0.22} side={DoubleSide} />
       </mesh>
-      {tier === "high" ? (
-        <>
-          {/* 沿渠 uv（v 轴）流动；支渠略带横向分量制造汇入感。 */}
-          <Water2ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} tier={tier} flowDirection={[0.12, 1]} normalScale={1.2} />
-          <Water2ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} tier={tier} flowDirection={[0.28, 0.96]} normalScale={1.1} />
-        </>
-      ) : tier === "medium" ? (
-        <>
-          {/* 中档性能门（fv-2zv）：Water2 每实例每帧 2 次额外场景渲染，双渠
-              同开在软件渲染实测掉到 ~32fps。第 7 章机位只看到东支渠——只给
-              支渠上 Water2，主渠保旧水面，成本减半保住关键镜头。 */}
-          <ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} />
-          <Water2ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} tier={tier} flowDirection={[0.28, 0.96]} normalScale={1.1} />
-        </>
-      ) : (
+      {tier === "low" ? (
         <>
           <ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} />
           <ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} />
+        </>
+      ) : (
+        <>
+          {/* 性能门（fv-2zv）：Water2 每实例每帧 2 次整场景渲染。第 7 章机位
+              只看到东支渠（主渠可见段仅闸门附近一小截），而双渠同开在软件渲染
+              实测 16-19fps——主渠全档保旧水面，反射预算集中给真正入画的支渠。 */}
+          <ChannelWater path={curve} width={5.7} baseLift={-0.3} fill={event.mainChannelProgress} rise={0.24} />
+          <Water2ChannelWater path={branchCurve} width={1.85} baseLift={-0.2} fill={event.branchChannelProgress} rise={0.15} tier={tier} flowDirection={[0.28, 0.96]} normalScale={1.1} />
         </>
       )}
       <FlowParticles path={curve} flowProgress={event.mainChannelProgress} pulseProgress={event.inletProgress} />

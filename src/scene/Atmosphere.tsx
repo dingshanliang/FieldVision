@@ -1,4 +1,4 @@
-import { Environment } from "@react-three/drei";
+import { Environment, Cloud, Clouds } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import {
@@ -34,6 +34,7 @@ import { SafePhotographicHorizon } from "./PhotographicHorizon";
 import { BirdFlock } from "./BirdFlock";
 import { NightLights } from "./NightLights";
 import { SunDisc } from "./SunDiscMesh";
+import { cloudLayout, makeCloudTextureUrl } from "./cloudLayer";
 
 const baseSunDirection = new Vector3(...visualConfig.sunDirection).normalize();
 
@@ -564,6 +565,64 @@ function DustMotes({ count }: { count: number }) {
   );
 }
 
+/**
+ * 体积云层（fv-i1s）：drei <Clouds> 实例化 billboard，颜色/透明度随日相与
+ * 暴雨联动（夜间压暗、暴雨压灰），纹理程序化生成保离线安全。布局全部在
+ * y>190，避开照片全景圆柱带（详见 cloudLayer.ts）。中档取前 4 朵降实例
+ * 预算；低档不挂。
+ */
+function CloudLayer({ tier }: { tier: "high" | "medium" | "low" }) {
+  const dayPhase = useFarmStore((state) => state.dayPhase);
+  const stormProgress = useFarmStore((state) => state.stormProgress);
+  const textureUrl = useMemo(() => makeCloudTextureUrl(), []);
+  // 性能门（fv-i1s）：透明 billboard 吃填充率（软件渲染实测 6 朵 ~17fps）。
+  // 高档 4 朵、中档 2 朵并压段数与包围盒；低档不挂。
+  const layout = useMemo(() => cloudLayout(), []);
+  const visibleClouds = tier === "high" ? layout.slice(0, 4) : layout.slice(0, 2);
+  const segmentCap = tier === "high" ? 18 : 11;
+  const boundScale = tier === "high" ? 1 : 0.72;
+  const cloudLight = resolveLightingTargets(dayPhase, stormProgress).skyCloudLight;
+  const cloudDark = resolveLightingTargets(dayPhase, stormProgress).skyCloudDark;
+  // 渲染只发生在 store 变化时，直接计算即可（避免 useMemo 依赖告警）。
+  const cloudColor = new Color()
+    .setRGB(
+      (cloudLight[0] + cloudDark[0]) / 2,
+      (cloudLight[1] + cloudDark[1]) / 2,
+      (cloudLight[2] + cloudDark[2]) / 2,
+      SRGBColorSpace,
+    )
+    .lerp(new Color().setRGB(cloudDark[0], cloudDark[1], cloudDark[2], SRGBColorSpace), stormProgress * 0.55)
+    .getHexString(SRGBColorSpace);
+  // 暴雨用规模与透明度表达“云层压境”：体积膨胀 + 高度下沉 + 不透明度抬升
+  // （数量恒定保性能，视感靠 scale/opacity/y 变化）。
+  const stormVolume = 1 + stormProgress * 0.5;
+  const stormSink = stormProgress * 42;
+  const phaseOpacity = (dayPhase === "night" ? 0.3 : dayPhase === "day" ? 0.75 : 0.55) * (1 - stormProgress * 0.1);
+  return (
+    <Clouds limit={90} range={90} texture={textureUrl}>
+      {visibleClouds.map((spec, index) => (
+        <Cloud
+          key={index}
+          position={[spec.position[0], spec.position[1] - stormSink, spec.position[2]] as unknown as [number, number, number]}
+          scale={spec.scale * boundScale * stormVolume}
+          rotation={spec.rotation}
+          segments={Math.min(spec.segments, segmentCap)}
+          opacity={Math.min(1, spec.opacity * phaseOpacity * (1 + stormProgress * 0.35))}
+          speed={0.08}
+          bounds={[13 * boundScale, 2.2 * boundScale, 6 * boundScale]}
+          volume={6 * stormVolume}
+          smallestVolume={0.4}
+          growth={3.5}
+          fade={70}
+          concentrate="random"
+          seed={spec.seed}
+          color={`#${cloudColor}`}
+        />
+      ))}
+    </Clouds>
+  );
+}
+
 export function Atmosphere() {
   const tier = usePerformanceTier();
   const demoStep = useFarmStore((state) => state.demoStep);
@@ -587,6 +646,7 @@ export function Atmosphere() {
       {tier !== "low" && <BirdFlock />}
       {tier !== "low" && <DustMotes count={tier === "high" ? 240 : 130} />}
       {tier !== "low" && <SunDisc />}
+      {tier !== "low" && <CloudLayer tier={tier} />}
       <NightLights tier={tier} />
     </>
   );
