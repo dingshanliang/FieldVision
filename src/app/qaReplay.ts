@@ -13,6 +13,9 @@ export interface QaRunResult {
   postRunScene: QaSceneMetrics;
   postRunMutationCount: number;
   lateWriteAttempts: number;
+  /** 低档拾取探针（fv-227，DEV only）：raycast 均值/峰值毫秒，>2ms 尖峰
+   *  提示需要 Bvh 热修。计时是诊断量，不参与三轮重放的一致性签名。 */
+  pickMs?: { mean: number; max: number };
 }
 
 export function createQaRunResult(result: QaRunResult): QaRunResult {
@@ -20,7 +23,9 @@ export function createQaRunResult(result: QaRunResult): QaRunResult {
 }
 
 function signature(result: QaRunResult) {
-  return JSON.stringify(result);
+  // pickMs 是毫秒级计时，跨轮必然抖动——从确定性比较中剔除（undefined
+  // 属性会被 JSON.stringify 丢弃）。
+  return JSON.stringify({ ...result, pickMs: undefined });
 }
 
 export function compareQaRuns(results: readonly QaRunResult[], expectedRuns: number) {

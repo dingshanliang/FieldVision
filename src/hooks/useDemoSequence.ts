@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { createSmartFarmSequencePlan } from "../state/smartFarmDirector";
+import type { SmartFarmChapter } from "../state/smartFarmState";
 import { useFarmStore } from "../state/useFarmStore";
 
 /** 暂停感知的等待：只在未暂停时倒计时（导演系统 fv-o6c.12 真实暂停继续）。 */
@@ -77,13 +78,19 @@ export function useDemoSequence() {
     s.setPaused(false);
   }, [store]);
 
-  const play = useCallback(async (options?: { confirmationMode?: "simulated" | "presenter" }) => {
+  const play = useCallback(async (options?: {
+    confirmationMode?: "simulated" | "presenter";
+    /** 深链起点（fv-227）：从该章开始播放，之前的章节不重演。 */
+    from?: SmartFarmChapter;
+  }) => {
     activeController?.abort();
     const controller = new AbortController();
     activeController = controller;
     sequenceGeneration += 1;
     const state = store.getState();
-    const plan = createSmartFarmSequencePlan(state.pacing);
+    const fullPlan = createSmartFarmSequencePlan(state.pacing);
+    const startIndex = options?.from ? fullPlan.findIndex((chapter) => chapter.id === options.from) : -1;
+    const plan = startIndex > 0 ? fullPlan.slice(startIndex) : fullPlan;
     state.resetDemo();
     state.setDemoPlaying(true);
     state.setPaused(false);

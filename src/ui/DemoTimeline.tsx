@@ -3,6 +3,7 @@ import { useDemoSequence } from "../hooks/useDemoSequence";
 import { SMART_FARM_CHAPTER_META } from "../state/smartFarmDirector";
 import type { SmartFarmChapter } from "../state/smartFarmState";
 import { audioEngine } from "../audio/audioEngine";
+import { syncChapterParam } from "../app/deepLink";
 import { useFarmStore } from "../state/useFarmStore";
 
 export function DemoTimeline() {
@@ -54,6 +55,7 @@ export function DemoTimeline() {
   function jumpTo(chapter: SmartFarmChapter) {
     stop();
     applySmartFarmChapter(chapter);
+    syncChapterParam(chapter);
   }
 
   return (
