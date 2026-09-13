@@ -33,6 +33,7 @@ import type { DayPhase } from "../types/farm";
 import { SafePhotographicHorizon } from "./PhotographicHorizon";
 import { BirdFlock } from "./BirdFlock";
 import { NightLights } from "./NightLights";
+import { SunDisc } from "./SunDiscMesh";
 
 const baseSunDirection = new Vector3(...visualConfig.sunDirection).normalize();
 
@@ -585,6 +586,7 @@ export function Atmosphere() {
       <SafePhotographicHorizon fallback={<TreeLine />} />
       {tier !== "low" && <BirdFlock />}
       {tier !== "low" && <DustMotes count={tier === "high" ? 240 : 130} />}
+      {tier !== "low" && <SunDisc />}
       <NightLights tier={tier} />
     </>
   );

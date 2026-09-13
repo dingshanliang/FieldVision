@@ -199,7 +199,7 @@ export function CameraDirector() {
     }
     const field = fieldById[selectedFieldId];
     if (!field) return;
-    if (demoStep === "drone-scan") {
+    if (demoStep === "drone-scan" && smartFarmChapter !== "remote-decision") {
       // Don't fly to a fixed overlook — useFrame tracks the drone live. Seed
       // the follow frame from wherever the camera actually is now, so the
       // hand-off from the previous beat eases in instead of snapping, and
@@ -213,11 +213,15 @@ export function CameraDirector() {
       flyTo([66, 52, -20], [23, 4, -66], !REDUCED_MOTION);
       return;
     }
-    const preset = viewMode === "field-ground" || demoStep === "inspect-risk"
+    // fv-qii：远程确认章的黄昏人视角——面向落日（dusk 太阳偏轴 ~15° 稳定
+    // 入画），确认卡在侧，光柱打在 A02 田上。
+    const preset = smartFarmChapter === "remote-decision"
       ? field.cameraPresets.ground
-      : viewMode === "irrigation" && field.cameraPresets.irrigationInlet
-        ? field.cameraPresets.irrigationInlet
-        : field.cameraPresets.aerial;
+      : viewMode === "field-ground" || demoStep === "inspect-risk"
+        ? field.cameraPresets.ground
+        : viewMode === "irrigation" && field.cameraPresets.irrigationInlet
+          ? field.cameraPresets.irrigationInlet
+          : field.cameraPresets.aerial;
     flyTo(preset.position, preset.target, !REDUCED_MOTION);
   }, [demoStep, flyTo, introComplete, selectedFieldId, smartFarmChapter, viewMode]);
 
@@ -241,7 +245,10 @@ export function CameraDirector() {
     // world position every frame (see Drone.tsx), so we just poll it here.
     // This early-returns before the transition/breathing state machine below,
     // which is for the fixed-preset beats only.
-    if (useFarmStore.getState().demoStep === "drone-scan") {
+    // fv-qii 例外：远程确认章（黄昏）走固定的人视角落日机位，不跟拍——
+    // 低角度太阳入画是 GodRays 光柱的载体。
+    if (useFarmStore.getState().demoStep === "drone-scan"
+      && useFarmStore.getState().smartFarmChapter !== "remote-decision") {
       const drone = droneWorldPosition;
       const scanProgress = useFarmStore.getState().scanProgress;
       // Keep the third-person follow frame tracking even during the FPV

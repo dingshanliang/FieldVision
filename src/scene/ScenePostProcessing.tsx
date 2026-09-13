@@ -1,4 +1,4 @@
-import { Bloom, ChromaticAberration, DepthOfField, EffectComposer, N8AO, Noise, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
+import { Bloom, ChromaticAberration, DepthOfField, EffectComposer, GodRays, N8AO, Noise, SMAA, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { BlendFunction, ToneMappingMode, type EffectComposer as EffectComposerImpl } from "postprocessing";
 import { Vector2 } from "three";
 import { useEffect, useRef } from "react";
@@ -7,6 +7,7 @@ import { resolveLightingTargets } from "../config/dayNight";
 import { useFarmStore } from "../state/useFarmStore";
 import { povCutEngaged } from "./dronePov";
 import { sceneComposer } from "./composerBridge";
+import { sunDiscMesh } from "./SunDiscMesh";
 
 /** Cinematic shallow focus for the close-up beats; wide shots stay fully sharp. */
 function dofPreset(viewMode: string, demoStep: string) {
@@ -52,6 +53,9 @@ export function ScenePostProcessing() {
   // 沿用第三人称跟拍的 focus 76 会把 20m 外的地面糊掉。
   const dof = demoStep === "drone-scan" && povCutEngaged(scanProgress) ? null : dofPreset(viewMode, demoStep);
   const ao = aoEnabled();
+  // fv-qii：清晨/黄昏低角度光柱（GodRaysEffect 自带于 postprocessing，零新
+  // 依赖）。太阳出画时效果自然衰减为无操作；与 SunDiscMesh 的可见性同条件。
+  const godRaysActive = (dayPhase === "dawn" || dayPhase === "dusk") && stormProgress < 0.3;
   const effects = [
     ...(ao
       ? [
@@ -84,6 +88,20 @@ export function ScenePostProcessing() {
       luminanceThreshold={visualConfig.bloomThreshold}
       mipmapBlur
     />,
+    ...(godRaysActive
+      ? [
+          <GodRays
+            key="godrays"
+            sun={sunDiscMesh}
+            samples={48}
+            density={0.94}
+            decay={0.92}
+            weight={0.45}
+            exposure={0.85}
+            blur
+          />,
+        ]
+      : []),
     <ToneMapping key="tone" mode={ToneMappingMode.ACES_FILMIC} />,
     <SMAA key="smaa" />,
     <ChromaticAberration
