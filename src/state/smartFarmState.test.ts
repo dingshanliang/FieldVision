@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SMART_FARM_CHAPTERS, getSmartFarmChapterSnapshot } from "./smartFarmState";
+import { recoverySummary } from "./recoveryModel";
 import { useFarmStore } from "./useFarmStore";
 
 describe("smart farm canonical chapter snapshots", () => {
@@ -139,6 +140,17 @@ describe("smart farm canonical chapter snapshots", () => {
     useFarmStore.getState().applySmartFarmChapter("base-online");
     expect(useFarmStore.getState().dayPhase).toBe("dawn");
     expect(useFarmStore.getState().timeCut).toBeNull();
+  });
+
+  it("backs the final scorecard with fully verified receipts", () => {
+    const closing = getSmartFarmChapterSnapshot("return-overview");
+    const records = Object.values(closing.tasks);
+    expect(records).toHaveLength(6);
+    expect(records.every((task) => task.status === "verified")).toBe(true);
+    const summary = recoverySummary();
+    expect(summary).toMatchObject({ rootVwcBefore: 18, rootVwcAfter: 27, lowValueAreaBefore: 23.6, lowValueAreaAfter: 0.4 });
+    // 任务目标与恢复模型同源（27%），消灭第二份手写数字。
+    expect(closing.tasks["IRRIGATE-A02"]?.plan.objective).toContain("27%");
   });
 
   it("applies a direct chapter jump atomically through the store", () => {

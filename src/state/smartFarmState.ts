@@ -112,7 +112,7 @@ function createBaseTasks(): Record<string, AutonomousTaskRecord> {
       equipmentId: "PUMP-01+GATE-E",
       equipmentLabel: "泵站 · 主闸 · 东支闸",
       routeId: "A02-EAST-WATER-CHAIN",
-      objective: "根区含水率 18% → 26%",
+      objective: "根区含水率 18% → 27%",
       expectedDurationMinutes: 37,
       safetyBoundaryLabel: "A02 东侧 23.6 亩",
       parametersVersion: 1,

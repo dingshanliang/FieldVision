@@ -7,6 +7,7 @@ import { DronePovHud } from "../ui/DronePovHud";
 import { SoundToggle } from "../ui/SoundToggle";
 import { DemoTimeline } from "../ui/DemoTimeline";
 import { FieldDetailPanel } from "../ui/FieldDetailPanel";
+import { FinalScorecard } from "../ui/FinalScorecard";
 import { LayerSwitcher } from "../ui/LayerSwitcher";
 import { PhotoToolbar } from "../ui/PhotoToolbar";
 import { PresenterControls } from "../ui/PresenterControls";
@@ -18,10 +19,41 @@ import { audioEngine } from "../audio/audioEngine";
 import { useFarmStore } from "../state/useFarmStore";
 import type { SmartFarmChapter } from "../state/smartFarmState";
 import { shouldAutoReplay } from "./autoReplay";
+import { initialChapter } from "./deepLink";
 import { compareQaRuns, createQaRunResult, type QaRunResult } from "./qaReplay";
 import { selectActiveMachineIds } from "../scene/autonomousMachineMotion";
 import { detectTier } from "../hooks/usePerformanceTier";
 import { readQaSceneMetrics } from "../scene/qaSceneMetrics";
+
+/**
+ * 拾取探针（fv-227）：seeded 坐标 20 次屏幕 raycast 计时，DEV 句柄缺失时跳过。
+ * 注意 __pickAt 打的是整棵场景树（含全部作物 InstancedMesh），因此这是
+ * **上界**测量——R3F 事件系统只对注册了 handler 的对象做 raycast，真实
+ * 交互路径远低于此值。读数持续升高时再评估 drei <Bvh> 热修；当前仅作
+ * 回归趋势诊断，不作为 PASS/FAIL 门。
+ */
+function samplePickTiming(): { mean: number; max: number } | undefined {
+  const pickAt = (window as unknown as { __pickAt?: (x: number, y: number) => unknown }).__pickAt;
+  if (typeof pickAt !== "function") return undefined;
+  let seed = 20260913;
+  const random = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  const samples = 20;
+  let sum = 0;
+  let max = 0;
+  for (let index = 0; index < samples; index += 1) {
+    const x = random() * 1.6 - 0.8;
+    const y = random() * 1.6 - 0.8;
+    const startedAt = performance.now();
+    pickAt(x, y);
+    const elapsed = performance.now() - startedAt;
+    sum += elapsed;
+    if (elapsed > max) max = elapsed;
+  }
+  return { mean: Math.round((sum / samples) * 100) / 100, max: Math.round(max * 100) / 100 };
+}
 
 function AutoDemo() {
   const introComplete = useFarmStore((state) => state.introComplete);
@@ -31,7 +63,13 @@ function AutoDemo() {
     if (!introComplete || started.current) return;
     const params = new URLSearchParams(window.location.search);
     // QA harness: ?qa=1 disables autoplay so screenshot scripts can drive state directly.
-    if (params.has("qa")) return;
+    if (params.has("qa")) {
+      // 深链仍要生效：?qa=1&chapter=weather-front 打开即停在暴雨章快照。
+      if (initialChapter && initialChapter !== "base-online") {
+        useFarmStore.getState().applySmartFarmChapter(initialChapter);
+      }
+      return;
+    }
     started.current = true;
     const qaRun = params.get("qaRun");
     if (qaRun === "fast" || qaRun === "narration") {
@@ -80,6 +118,7 @@ function AutoDemo() {
               postRunScene,
               postRunMutationCount,
               lateWriteAttempts: sequenceAudit.lateWriteAttempts - auditBefore.lateWriteAttempts,
+              pickMs: samplePickTiming(),
             }));
           }
           const audit = compareQaRuns(results, runs);
@@ -109,7 +148,7 @@ function AutoDemo() {
       if (!wasPlaying && state.demoPlaying) completedAt = null;
       wasPlaying = state.demoPlaying;
     });
-    const initialTimer = window.setTimeout(() => void play(), 1200);
+    const initialTimer = window.setTimeout(() => void play(initialChapter && initialChapter !== "base-online" ? { from: initialChapter } : undefined), 1200);
     const replayTimer = window.setInterval(() => {
       const state = useFarmStore.getState();
       const now = performance.now();
@@ -207,6 +246,7 @@ export function App() {
           <RemoteConfirmationCard />
           <TimeCutCard />
           <ChapterCaption />
+          <FinalScorecard />
           <DemoPrecheck />
           <SoundToggle />
           <div className="canvas-status" aria-live="polite">三维基地已就绪。可选择地块、切换图层或播放完整演示。</div>

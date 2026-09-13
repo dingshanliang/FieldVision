@@ -111,6 +111,30 @@ export function phaseEvidence(phase: RecoveryPhase): PhaseEvidence {
   return PHASE_EVIDENCE[phase] ?? PHASE_EVIDENCE.none;
 }
 
+export interface RecoverySummary {
+  rootVwcBefore: number;
+  rootVwcAfter: number;
+  verifyDayLabel: string;
+  lowValueAreaBefore: number;
+  lowValueAreaAfter: number;
+}
+
+/**
+ * 收官数字的唯一派生源（片尾成绩卡与地块面板共用）：从 none → resolved
+ * 两相位的证据快照取值，禁止在 UI 里出现第二份手写数字。
+ */
+export function recoverySummary(): RecoverySummary {
+  const before = PHASE_EVIDENCE.none;
+  const after = PHASE_EVIDENCE.resolved;
+  return {
+    rootVwcBefore: before.rootVwc.value,
+    rootVwcAfter: after.rootVwc.value,
+    verifyDayLabel: recoveryDayLabel(after.rootVwc.dayTag),
+    lowValueAreaBefore: before.canopy.areaMu,
+    lowValueAreaAfter: after.canopy.areaMu,
+  };
+}
+
 export function recoveryDayLabel(dayTag: string): string {
   const labels: Record<string, string> = {
     D0: "处置前（D0）",
