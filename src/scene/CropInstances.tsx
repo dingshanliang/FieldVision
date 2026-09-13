@@ -159,17 +159,19 @@ export function CropInstances({ field, selected }: CropInstancesProps) {
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   }, [field, irrigationProgress, placements, recoveryPhase, scanProgress]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     const mesh = meshRef.current;
     if (!mesh) return;
     const meshMaterial = mesh.material as MeshStandardMaterial;
     const shader = meshMaterial.userData.shader as { uniforms: { uTime: { value: number }; uWind: { value: number } } } | undefined;
     if (!shader) return;
-    // fv-photo 冻结：定格时风摆时间停走。fv-weather：暴雨时阵风加成。
+    // fv-photo 冻结：定格时风摆时间停走。fv-weather：暴雨时阵风加成
+    // （强度经 2.4 阻尼趋近目标，直跳暴雨章与光照/雨幕同拍渐起）。
     if (useFarmStore.getState().photoFrozen) return;
     const storm = useFarmStore.getState().stormProgress;
+    const targetWind = visualConfig.windStrength * (1 + STORM_OVERLAY.windBoost * storm);
     shader.uniforms.uTime.value = clock.elapsedTime;
-    shader.uniforms.uWind.value = visualConfig.windStrength * (1 + STORM_OVERLAY.windBoost * storm);
+    shader.uniforms.uWind.value += (targetWind - shader.uniforms.uWind.value) * (1 - Math.exp(-delta * 2.4));
   });
 
   return (

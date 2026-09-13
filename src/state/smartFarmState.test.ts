@@ -120,6 +120,19 @@ describe("smart farm canonical chapter snapshots", () => {
     });
   });
 
+  it("clearing the field selection leaves chapter-driven state untouched", () => {
+    useFarmStore.getState().applySmartFarmChapter("weather-front");
+    const before = useFarmStore.getState();
+    useFarmStore.getState().selectField("A03");
+    useFarmStore.getState().clearFieldSelection();
+    const after = useFarmStore.getState();
+    expect(after.selectedFieldId).toBeNull();
+    expect(after.smartFarmChapter).toBe("weather-front");
+    expect(after.stormProgress).toBe(before.stormProgress);
+    expect(after.viewMode).toBe(before.viewMode);
+    expect(after.demoStep).toBe(before.demoStep);
+  });
+
   it("preserves the canonical snapshot while presentation is paused", () => {
     useFarmStore.getState().applySmartFarmChapter("autonomous-operations");
     useFarmStore.getState().setPaused(true);

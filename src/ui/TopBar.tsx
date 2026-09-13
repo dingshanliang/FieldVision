@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, CloudSun, Moon, Pause, Play, RotateCcw, Sunrise, Sun, Sunset } from "lucide-react";
+import { Camera, CloudDrizzle, CloudLightning, CloudRain, CloudSun, Moon, Pause, Play, RotateCcw, Sunrise, Sun, Sunset } from "lucide-react";
 import { useFarmStore } from "../state/useFarmStore";
 import { useDemoSequence } from "../hooks/useDemoSequence";
+import { weatherStatusFor, type WeatherStatusKind } from "./weatherStatus";
 import type { DayPhase } from "../types/farm";
+
+const WEATHER_ICONS: Record<WeatherStatusKind, typeof Sun> = {
+  storm: CloudLightning,
+  rain: CloudRain,
+  drizzle: CloudDrizzle,
+  "night-clear": Moon,
+  clear: CloudSun,
+};
 
 const PHASES: Array<{ id: DayPhase; label: string; Icon: typeof Sun }> = [
   { id: "dawn", label: "清晨", Icon: Sunrise },
@@ -67,6 +76,10 @@ export function TopBar() {
   const photoMode = useFarmStore((state) => state.photoMode);
   const setPhotoMode = useFarmStore((state) => state.setPhotoMode);
   const reset = useFarmStore((state) => state.resetDemo);
+  const stormProgress = useFarmStore((state) => state.stormProgress);
+  const dayPhase = useFarmStore((state) => state.dayPhase);
+  const weather = weatherStatusFor(stormProgress, dayPhase);
+  const WeatherIcon = WEATHER_ICONS[weather.kind];
   const { play, stop, togglePause } = useDemoSequence();
   function returnToOverview() { stop(); reset(); }
   return (
@@ -76,7 +89,7 @@ export function TopBar() {
         <div><strong>FieldVision</strong><small>农田数字孪生演示</small></div>
       </div>
       <div className="top-status">
-        <span><CloudSun size={15} /> 23 °C · 东南风 2 级</span>
+        <span><WeatherIcon size={15} /> {weather.label}</span>
         <span><i className="status-dot" /> 12 台设备在线</span>
         {introComplete && <DayPhaseSwitcher />}
         {introComplete && (

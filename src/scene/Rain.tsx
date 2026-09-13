@@ -94,17 +94,23 @@ export function Rain() {
     fog: false,
   }), []);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     const points = pointsRef.current;
     if (!points) return;
     // 通过 ref 触达材质再修改（渲染作用域捕获的对象不可变，react-hooks 规则）。
+    // fv-weather 穿帮修复：透明度向目标做 2.4 时间常数的指数阻尼（与光照
+    // rig 同拍），直跳暴雨章时雨幕渐起，不再与光照错拍 1-2 秒地瞬跳。
     const pointsMaterial = points.material as ShaderMaterial;
     const storm = useFarmStore.getState().stormProgress;
     const frozen = useFarmStore.getState().photoFrozen;
-    points.visible = storm > 0.02;
     const opacity = pointsMaterial.uniforms.uOpacity;
     const time = pointsMaterial.uniforms.uTime;
-    if (opacity) opacity.value = storm * 0.42;
+    if (opacity) {
+      if (!frozen) {
+        opacity.value += (storm * 0.42 - opacity.value) * (1 - Math.exp(-delta * 2.4));
+      }
+      points.visible = storm > 0.02 || opacity.value > 0.004;
+    }
     if (time && !frozen) time.value = clock.elapsedTime;
   });
 

@@ -30,7 +30,7 @@ const ScenePostProcessing = lazy(() =>
 
 export function FarmScene() {
   const tier = usePerformanceTier();
-  const applyDemoState = useFarmStore((state) => state.applyDemoState);
+  const clearFieldSelection = useFarmStore((state) => state.clearFieldSelection);
   const perf = perfEnabled();
   const qaProbe = qaSceneProbeEnabled();
   const [postProcessingReady, setPostProcessingReady] = useState(false);
@@ -47,7 +47,7 @@ export function FarmScene() {
     <>
       <Atmosphere />
       <Rain />
-      <group onPointerMissed={() => applyDemoState("overview")}>
+      <group onPointerMissed={clearFieldSelection}>
         <Terrain />
         <GroundDetails />
         <WorldLod />
