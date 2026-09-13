@@ -21,6 +21,17 @@ export interface TimeCut {
   label: string;
 }
 
+/**
+ * fv-daynight 三段式的时间锚点：章节与农业日期强绑定处显示跳切卡，
+ * 防止观众把 20 秒动画误读为实时恢复（CONTEXT.md Verified Outcome）。
+ * 播放与直跳同源（applySmartFarmChapter 查表写入），确定性。
+ */
+export const TIME_CUT_FOR_CHAPTER: Partial<Record<SmartFarmChapter, TimeCut>> = {
+  "irrigation-response": { day: "D0", label: "当日傍晚 · 联动供水" },
+  "outcome-verification": { day: "D1", label: "次日清晨 · 复测" },
+  "weather-front": { day: "D3", label: "第 3 天 · 强对流过境" },
+};
+
 /** 演示节奏：fast 快览 / narration 讲解留白（导演系统 fv-o6c.12）。 */
 export type Pacing = "fast" | "narration";
 export type InteractiveConfirmationSource = Exclude<ConfirmationSource, "demo-preset">;
@@ -61,6 +72,8 @@ interface FarmState {
   photoLetterbox: boolean;
   /** 进入照片模式前的演示暂停态，退出时恢复（瞬态簿记，非演示状态）。 */
   photoPriorPaused: boolean;
+  /** 声效开启态（UI 单一事实源；AudioContext 由 UI 层在手势内初始化）。 */
+  soundEnabled: boolean;
   selectField: (id: string | null) => void;
   clearFieldSelection: () => void;
   setHoveredField: (id: string | null) => void;
@@ -84,6 +97,7 @@ interface FarmState {
   setPhotoExposure: (exposure: number) => void;
   setPhotoFov: (fov: number | null) => void;
   setPhotoLetterbox: (letterbox: boolean) => void;
+  setSoundEnabled: (enabled: boolean) => void;
   requestPhotoCapture: () => void;
   applySmartFarmChapter: (chapter: SmartFarmChapter) => void;
   setConfirmationCountdown: (seconds: number | null) => void;
@@ -129,6 +143,7 @@ export const useFarmStore = create<FarmState>((set) => ({
   photoCaptureTick: 0,
   photoLetterbox: true,
   photoPriorPaused: false,
+  soundEnabled: false,
   selectField: (selectedFieldId) => set({ selectedFieldId }),
   // 点空白（onPointerMissed）只清选区：旧 applyDemoState("overview") 会重置
   // legacy 演示字段却不写 smartFarmChapter/stormProgress，播放中触发会与
@@ -165,6 +180,7 @@ export const useFarmStore = create<FarmState>((set) => ({
   setPhotoExposure: (photoExposure) => set({ photoExposure: Number.isFinite(photoExposure) ? Math.min(1.7, Math.max(0.55, photoExposure)) : 1 }),
   setPhotoFov: (photoFov) => set({ photoFov }),
   setPhotoLetterbox: (photoLetterbox) => set({ photoLetterbox }),
+  setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
   requestPhotoCapture: () => set((state) => ({ photoCaptureTick: state.photoCaptureTick + 1 })),
   applySmartFarmChapter: (smartFarmChapter) => set((state) => {
     const snapshot = getSmartFarmChapterSnapshot(smartFarmChapter);
@@ -197,7 +213,8 @@ export const useFarmStore = create<FarmState>((set) => ({
       scanProgress: snapshot.scanProgress,
       recoveryPhase: snapshot.recoveryPhase,
       stormProgress: snapshot.stormProgress ?? 0,
-      timeCut: null,
+      dayPhase: snapshot.dayPhase,
+      timeCut: TIME_CUT_FOR_CHAPTER[smartFarmChapter] ?? null,
       droneFollowing: false,
       fieldStatuses: { ...state.fieldStatuses, A02: snapshot.fieldStatus },
     };
@@ -209,10 +226,17 @@ export const useFarmStore = create<FarmState>((set) => ({
   confirmTaskForDemo: (taskId, source) => set((state) => {
     const task = state.tasks[taskId];
     if (!task || task.status !== "awaiting-confirmation") return state;
+    // 确认时刻跟随章节的农业日期：远程确认在作业日（06-03）傍晚，
+    // STORM-CHECK 在过境日（06-06）午后——与快照时间线同源，不再产生
+    // "夜幕画面 + 早晨 08:35 回执"的穿帮。
+    const confirmAt: Partial<Record<SmartFarmChapter, string>> = {
+      "remote-decision": "2026-06-03T17:40:00+08:00",
+      "weather-resume": "2026-06-06T14:46:00+08:00",
+    };
     return {
       tasks: {
         ...state.tasks,
-        [taskId]: confirmTask(task, source, "2026-06-03T08:35:00+08:00"),
+        [taskId]: confirmTask(task, source, confirmAt[state.smartFarmChapter] ?? "2026-06-03T17:40:00+08:00"),
       },
       confirmationCountdown: null,
       confirmationCue: source === "simulated-autoplay" ? "simulated-click" : "presenter-click",

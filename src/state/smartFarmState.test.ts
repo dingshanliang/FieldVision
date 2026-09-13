@@ -86,7 +86,9 @@ describe("smart farm canonical chapter snapshots", () => {
     const verified = getSmartFarmChapterSnapshot("outcome-verification");
     expect(verified.tasks["IRRIGATE-A02"]).toMatchObject({
       status: "verified",
-      verifiedOutcome: { evidenceIds: ["OBS-A02-D1", "OBS-A02-D3"] },
+      // D1（06-04 清晨）回执只引用 D1 证据；引用未来的 D3 证据曾是
+      // 时间线穿帮的一部分。
+      verifiedOutcome: { evidenceIds: ["OBS-A02-D1"], verifiedAt: "2026-06-04T07:30:00+08:00" },
     });
 
     const finalOverview = getSmartFarmChapterSnapshot("return-overview");
@@ -96,6 +98,47 @@ describe("smart farm canonical chapter snapshots", () => {
       fieldStatus: "recovered",
       recoveryPhase: "resolved",
     });
+  });
+
+  it("carries the dusk–night–dawn arc through the story chapters", () => {
+    const phase = (chapter: ReturnType<typeof getSmartFarmChapterSnapshot>["chapter"]) =>
+      getSmartFarmChapterSnapshot(chapter).dayPhase;
+    expect(phase("base-online")).toBe("dawn");
+    expect(phase("a02-alert")).toBe("dawn");
+    expect(phase("remote-decision")).toBe("dusk");
+    expect(phase("irrigation-response")).toBe("night");
+    expect(phase("outcome-verification")).toBe("dawn");
+    expect(phase("weather-front")).toBe("day");
+    expect(phase("weather-resume")).toBe("day");
+    expect(phase("return-overview")).toBe("day");
+  });
+
+  it("keeps the two-day mock timeline monotonic", () => {
+    const irrigation = getSmartFarmChapterSnapshot("irrigation-response").tasks["IRRIGATE-A02"];
+    expect(irrigation?.confirmationReceipt?.confirmedAt).toBe("2026-06-03T17:40:00+08:00");
+    const outcome = getSmartFarmChapterSnapshot("outcome-verification").tasks["IRRIGATE-A02"];
+    expect(outcome?.operationCompletion?.completedAt).toBe("2026-06-03T19:10:00+08:00");
+    expect(outcome?.verifiedOutcome?.verifiedAt).toBe("2026-06-04T07:30:00+08:00");
+    // 收尾回执在过境日（06-06）午后，不再倒流回作业日早晨。
+    const backfill = getSmartFarmChapterSnapshot("return-overview").tasks["MAINT-EAST"];
+    expect(backfill?.verifiedOutcome?.verifiedAt).toBe("2026-06-06T15:08:00+08:00");
+  });
+
+  it("derives time-cut anchors from the chapter snapshot through the store", () => {
+    useFarmStore.getState().applySmartFarmChapter("irrigation-response");
+    expect(useFarmStore.getState().dayPhase).toBe("night");
+    expect(useFarmStore.getState().timeCut).toEqual({ day: "D0", label: "当日傍晚 · 联动供水" });
+
+    useFarmStore.getState().applySmartFarmChapter("outcome-verification");
+    expect(useFarmStore.getState().dayPhase).toBe("dawn");
+    expect(useFarmStore.getState().timeCut).toEqual({ day: "D1", label: "次日清晨 · 复测" });
+
+    useFarmStore.getState().applySmartFarmChapter("weather-front");
+    expect(useFarmStore.getState().timeCut).toEqual({ day: "D3", label: "第 3 天 · 强对流过境" });
+
+    useFarmStore.getState().applySmartFarmChapter("base-online");
+    expect(useFarmStore.getState().dayPhase).toBe("dawn");
+    expect(useFarmStore.getState().timeCut).toBeNull();
   });
 
   it("applies a direct chapter jump atomically through the store", () => {

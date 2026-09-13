@@ -1,7 +1,8 @@
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, Volume2 } from "lucide-react";
 import { useDemoSequence } from "../hooks/useDemoSequence";
 import { SMART_FARM_CHAPTER_META } from "../state/smartFarmDirector";
 import type { SmartFarmChapter } from "../state/smartFarmState";
+import { audioEngine } from "../audio/audioEngine";
 import { useFarmStore } from "../state/useFarmStore";
 
 export function DemoTimeline() {
@@ -10,6 +11,7 @@ export function DemoTimeline() {
   const paused = useFarmStore((state) => state.paused);
   const pacing = useFarmStore((state) => state.pacing);
   const introComplete = useFarmStore((state) => state.introComplete);
+  const soundEnabled = useFarmStore((state) => state.soundEnabled);
   const applySmartFarmChapter = useFarmStore((state) => state.applySmartFarmChapter);
   const setPacing = useFarmStore((state) => state.setPacing);
   const setIntroComplete = useFarmStore((state) => state.setIntroComplete);
@@ -22,12 +24,29 @@ export function DemoTimeline() {
       setIntroComplete(true);
       setDemoStep("overview");
     };
+    // autoplay 在 intro 结束后自动触发、没有点击路径——intro 卡是开启声效
+    // 唯一可靠的手势载体（fv-jqb 音频入场重设计）。
+    const enableSound = () => {
+      if (!audioEngine.isInitialised) audioEngine.init();
+      void audioEngine.setEnabled(true);
+      const state = useFarmStore.getState();
+      useFarmStore.getState().setSoundEnabled(true);
+      audioEngine.setChapter(state.demoStep);
+      audioEngine.setDaylight(state.dayPhase, state.stormProgress);
+    };
     return (
       <div className="intro-caption">
         <span>FIELDVISION / 01</span>
         <strong>看见每一块田，掌握每一次变化</strong>
         <small>从基地全景，到一块田的完整决策闭环</small>
-        <button type="button" className="intro-skip" onClick={skipIntro} aria-label="跳过开场动画">跳过开场 →</button>
+        <div className="intro-actions">
+          {soundEnabled ? null : (
+            <button type="button" className="intro-sound" onClick={enableSound}>
+              <Volume2 size={14} /> 开启声效
+            </button>
+          )}
+          <button type="button" className="intro-skip" onClick={skipIntro} aria-label="跳过开场动画">跳过开场 →</button>
+        </div>
       </div>
     );
   }

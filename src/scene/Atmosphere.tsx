@@ -25,10 +25,11 @@ import {
   Vector3,
 } from "three";
 import { visualConfig } from "../config/visual";
-import { currentLighting, lerpCurrentLighting, resolveLightingTargets } from "../config/dayNight";
+import { currentLighting, lerpCurrentLighting, lightningFlash, resolveLightingTargets } from "../config/dayNight";
 import { seededRandom } from "../utils/geometry";
 import { usePerformanceTier } from "../hooks/usePerformanceTier";
 import { useFarmStore } from "../state/useFarmStore";
+import type { DayPhase } from "../types/farm";
 import { SafePhotographicHorizon } from "./PhotographicHorizon";
 import { BirdFlock } from "./BirdFlock";
 import { NightLights } from "./NightLights";
@@ -56,6 +57,7 @@ const skyFragmentShader = /* glsl */ `
   uniform float uGlowStrength;
   uniform vec3 uSunDisc;
   uniform vec3 uHaze;
+  uniform float uFlash;
 
   float fvHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float fvNoise(vec2 p) {
@@ -97,6 +99,8 @@ const skyFragmentShader = /* glsl */ `
     sky += uSunGlow * pow(sunAmount, 24.0) * uGlowStrength;
     sky += uSunDisc * smoothstep(0.99984, 0.99995, sunAmount) * 1.0;
     sky = mix(sky, uHaze, smoothstep(0.0, -0.14, h));
+    // 闪电：天穹整体向冷白提亮（lerp 之后的加性包络，照亮云底一瞬）。
+    sky = mix(sky, vec3(0.92, 0.95, 1.0), uFlash * 0.55);
     gl_FragColor = vec4(sky, 1.0);
   }
 `;
@@ -114,6 +118,7 @@ function MorningSky() {
     uGlowStrength: { value: currentLighting.sunGlowStrength },
     uSunDisc: { value: new Color(...currentLighting.sunDiscColor) },
     uHaze: { value: new Color(...currentLighting.skyHaze) },
+    uFlash: { value: 0 },
   }), []);
   useFrame(({ camera }) => {
     mesh.current?.position.copy(camera.position);
@@ -129,6 +134,7 @@ function MorningSky() {
     uniforms.uGlowStrength!.value = currentLighting.sunGlowStrength;
     uniforms.uSunDisc!.value.setRGB(...currentLighting.sunDiscColor);
     uniforms.uHaze!.value.setRGB(...currentLighting.skyHaze);
+    uniforms.uFlash!.value = lightningFlash.value;
   });
   return (
     <mesh ref={mesh} scale={1200} renderOrder={-1000} frustumCulled={false}>
@@ -164,10 +170,16 @@ function LightingRig({ shadowSize, shadowHorizontal, shadowVertical, castShadow 
 }) {
   const sunRef = useRef<DirectionalLight>(null);
   const hemiRef = useRef<HemisphereLight>(null);
+  const prevPhaseRef = useRef<DayPhase | null>(null);
   useFrame((root, delta) => {
     const farm = useFarmStore.getState();
     const target = resolveLightingTargets(farm.dayPhase, farm.stormProgress);
-    lerpCurrentLighting(target, 1 - Math.exp(-delta * 2.4));
+    // 相位切换 = 章节剪辑点：当帧全量快切（alpha=1），太阳/颜色/雾一次到位。
+    // 若走阻尼，sunDirection 的逐分量插值会让太阳"划过地平线"，低太阳角
+    // 的长阴影闪烁非常刺眼。同相位内（含暴雨推演）维持 2.4 时间常数阻尼。
+    const phaseChanged = prevPhaseRef.current !== farm.dayPhase;
+    prevPhaseRef.current = farm.dayPhase;
+    lerpCurrentLighting(target, phaseChanged ? 1 : 1 - Math.exp(-delta * 2.4));
     const exposure = farm.photoMode ? farm.photoExposure : 1;
 
     const sun = sunRef.current;
@@ -177,12 +189,13 @@ function LightingRig({ shadowSize, shadowHorizontal, shadowVertical, castShadow 
         currentLighting.sunDirection[1] * 260,
         currentLighting.sunDirection[2] * 260,
       );
-      sun.intensity = currentLighting.sunIntensity * exposure;
+      // 闪电为 lerp 之后的加性包络：脉冲不得被阻尼抹平（"慢闪"根因）。
+      sun.intensity = currentLighting.sunIntensity * exposure + lightningFlash.value * 3.2;
       sun.color.setRGB(...currentLighting.sunColor, SRGBColorSpace);
     }
     const hemi = hemiRef.current;
     if (hemi) {
-      hemi.intensity = currentLighting.hemiIntensity * exposure;
+      hemi.intensity = currentLighting.hemiIntensity * exposure + lightningFlash.value * 1.1;
       hemi.color.setRGB(...currentLighting.hemiSky, SRGBColorSpace);
       hemi.groundColor.setRGB(...currentLighting.hemiGround, SRGBColorSpace);
     }
@@ -224,36 +237,102 @@ function LightingRig({ shadowSize, shadowHorizontal, shadowVertical, castShadow 
   );
 }
 
-/** 夜幕星野：只在上半球铺点，透明度跟随 currentLighting.stars。 */
+/**
+ * 夜幕星野（fv-daynight 升级版）：seeded 银河带采样 + 每星亮度/尺寸/闪烁相位，
+ * 数量按性能档分级（high 1600 / medium 1000 / low 500）。透明度跟随
+ * currentLighting.stars，photoFrozen 时闪烁停走。固定像素尺寸 + 加性混合，
+ * 与雾/深度写入无关，不参与裁剪。
+ */
+const starVertexShader = /* glsl */ `
+  attribute float aSize;
+  attribute float aPhase;
+  attribute float aBrightness;
+  uniform float uTime;
+  varying float vAlpha;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    float twinkle = 0.82 + 0.18 * sin(uTime * (0.5 + aPhase * 1.6) + aPhase * 6.2831);
+    vAlpha = aBrightness * twinkle;
+    gl_PointSize = aSize;
+  }
+`;
+
+const starFragmentShader = /* glsl */ `
+  uniform float uOpacity;
+  varying float vAlpha;
+  void main() {
+    vec2 offset = gl_PointCoord - 0.5;
+    float radial = smoothstep(0.5, 0.08, length(offset));
+    float alpha = radial * vAlpha * uOpacity;
+    if (alpha < 0.004) discard;
+    gl_FragColor = vec4(0.82, 0.88, 1.0, alpha);
+  }
+`;
+
+/** 银河带大圆法向（固定值保证逐帧/逐次重放一致）。 */
+const MILKY_WAY_NORMAL: readonly [number, number, number] = [0.38, 0.86, 0.34];
+
 function Stars() {
+  const tier = usePerformanceTier();
   const pointsRef = useRef<Points>(null);
+  const count = tier === "high" ? 1600 : tier === "medium" ? 1000 : 500;
   const geometry = useMemo(() => {
     const random = seededRandom(4409);
-    const count = 720;
     const positions = new Float32Array(count * 3);
-    for (let index = 0; index < count; index += 1) {
-      // 均匀取上半球方向，避免在极点附近堆簇。
+    const sizes = new Float32Array(count);
+    const phases = new Float32Array(count);
+    const brightness = new Float32Array(count);
+    const bandNormal = MILKY_WAY_NORMAL;
+    const bandLength = Math.hypot(bandNormal[0], bandNormal[1], bandNormal[2]);
+    let index = 0;
+    while (index < count) {
+      // 均匀取上半球方向；沿银河带大圆做拒绝采样加权，带内密度更高。
       const azimuth = random() * Math.PI * 2;
       const elevation = Math.asin(random() * 0.96 + 0.04);
+      const dx = Math.cos(elevation) * Math.cos(azimuth);
+      const dy = Math.sin(elevation);
+      const dz = Math.cos(elevation) * Math.sin(azimuth);
+      const bandDistance = Math.abs((dx * bandNormal[0] + dy * bandNormal[1] + dz * bandNormal[2]) / bandLength);
+      const inBandProbability = 0.22 + 0.78 * Math.exp(-Math.pow(bandDistance / 0.16, 2));
+      if (random() > inBandProbability) continue;
       const radius = 820;
-      positions[index * 3] = Math.cos(elevation) * Math.cos(azimuth) * radius;
-      positions[index * 3 + 1] = Math.sin(elevation) * radius + 20;
-      positions[index * 3 + 2] = Math.cos(elevation) * Math.sin(azimuth) * radius;
+      positions[index * 3] = dx * radius;
+      positions[index * 3 + 1] = dy * radius + 20;
+      positions[index * 3 + 2] = dz * radius;
+      // 带内恒星偏亮偏大：银河读得出"一条带"而不是均匀噪点。
+      const bandBoost = 1 - Math.min(1, bandDistance / 0.3);
+      sizes[index] = 1.1 + random() * 1.2 + bandBoost * 0.5;
+      phases[index] = random();
+      brightness[index] = 0.32 + random() * 0.5 + bandBoost * 0.22;
+      index += 1;
     }
     const result = new BufferGeometry();
     result.setAttribute("position", new BufferAttribute(positions, 3));
+    result.setAttribute("aSize", new BufferAttribute(sizes, 1));
+    result.setAttribute("aPhase", new BufferAttribute(phases, 1));
+    result.setAttribute("aBrightness", new BufferAttribute(brightness, 1));
     return result;
-  }, []);
-  useFrame(() => {
-    const material = pointsRef.current?.material as { opacity: number } | undefined;
-    if (material) material.opacity = currentLighting.stars;
-    if (pointsRef.current) pointsRef.current.visible = currentLighting.stars > 0.02;
+  }, [count]);
+  const material = useMemo(() => new ShaderMaterial({
+    vertexShader: starVertexShader,
+    fragmentShader: starFragmentShader,
+    uniforms: { uTime: { value: 0 }, uOpacity: { value: 0 } },
+    transparent: true,
+    depthWrite: false,
+    fog: false,
+    blending: AdditiveBlending,
+  }), []);
+  useFrame(({ clock }) => {
+    const points = pointsRef.current;
+    if (!points) return;
+    // 通过 ref 触达材质再修改（渲染作用域捕获的对象不可变，react-hooks 规则）。
+    const pointsMaterial = points.material as ShaderMaterial;
+    points.visible = currentLighting.stars > 0.02;
+    pointsMaterial.uniforms.uOpacity!.value = currentLighting.stars;
+    if (!useFarmStore.getState().photoFrozen) pointsMaterial.uniforms.uTime!.value = clock.elapsedTime;
   });
-  return (
-    <points ref={pointsRef} geometry={geometry} frustumCulled={false} renderOrder={-990}>
-      <pointsMaterial color="#cfe0ff" size={1.6} sizeAttenuation={false} transparent opacity={0} depthWrite={false} fog={false} blending={AdditiveBlending} />
-    </points>
-  );
+  return <points ref={pointsRef} geometry={geometry} material={material} frustumCulled={false} renderOrder={-990} />;
 }
 
 interface TreeSpec { x: number; z: number; scale: number; rotation: number; tone: number }

@@ -14,6 +14,7 @@ import { RemoteConfirmationCard } from "../ui/RemoteConfirmationCard";
 import { TimeCutCard } from "../ui/TimeCutCard";
 import { TopBar } from "../ui/TopBar";
 import { readDemoSequenceAudit, useDemoSequence } from "../hooks/useDemoSequence";
+import { audioEngine } from "../audio/audioEngine";
 import { useFarmStore } from "../state/useFarmStore";
 import type { SmartFarmChapter } from "../state/smartFarmState";
 import { shouldAutoReplay } from "./autoReplay";
@@ -166,6 +167,24 @@ export function App() {
   const present = presentMode();
   const photoMode = usePhotoModeHotkeys();
   const chapter = useFarmStore((state) => state.smartFarmChapter);
+  // 任意首次手势都预初始化 AudioContext（幂等）：autoplay 流没有点击路径，
+  // 观众之后任何时候经 intro 卡/顶栏开启声效都不再受 suspended 状态限制。
+  const gestureArmed = useRef(false);
+  useEffect(() => {
+    const arm = () => {
+      if (gestureArmed.current) return;
+      gestureArmed.current = true;
+      audioEngine.init();
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+    window.addEventListener("pointerdown", arm, { passive: true });
+    window.addEventListener("keydown", arm);
+    return () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+  }, []);
   // fv-66y.22: 2.39:1 letterbox 仅在无人机扫描与恢复验证两拍启用——那是"作为镜头"的强信号。
   // present 模式也保留（属于电影感画面而非操作层）；照片模式强制启用。
   const cinematic = chapter === "coordinated-patrol" || chapter === "a02-alert" || chapter === "outcome-verification" || photoMode;
@@ -176,6 +195,8 @@ export function App() {
       {/* 云台 FPV 切入的画面 HUD（自门控：仅 drone-scan 的 POV 窗口内出现） */}
       <DronePovHud />
       <div className={`letterbox${cinematic ? " is-active" : ""}`} aria-hidden="true" />
+      {/* 低档闪电退化的全屏微闪（高/中档由天穹与光源直接表达） */}
+      <div className="lightning-flash" aria-hidden="true" />
       {present || photoMode ? null : (
         <>
           <TopBar />

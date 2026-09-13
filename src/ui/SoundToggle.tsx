@@ -1,19 +1,24 @@
 /**
- * 声音开关（fv-66y.4）。点击首次初始化 AudioEngine（满足 autoplay 策略的用户手势），
- * 之后切换静音。订阅 demoStep 让 AudioEngine 的章节 SFX 跟随演示。默认关闭。
+ * 声音开关（fv-66y.4 + fv-jqb 音频入场重设计）。开启态以 store.soundEnabled
+ * 为单一事实源（intro 卡的"开启声效"按钮与此处共用）；点击首次初始化
+ * AudioEngine（满足 autoplay 策略的用户手势），之后切换静音。订阅
+ * demoStep/storm/dayPhase/FPV 窗口，让章节 SFX、雨声、鸟鸣与电机增益
+ * 跟随演示。默认关闭。
  *
- * 可发现性（fv-66y.13）：默认 🔇 图标对首次观众几乎不可见——开场结束后的 ~8s 短窗
- * 内、未开启时，在 toggle 旁加一个 "▶ 点击开启电影音效" 脉冲提示。开启或超时即消失。
+ * 可发现性：默认 🔇 图标对首次观众几乎不可见——开场结束后的 ~8s 短窗
+ * 内、未开启时，在 toggle 旁显示脉冲提示；主要的入场入口已前移到 intro
+ * 结束卡（autoplay 无点击路径，那是唯一可靠的手势载体）。
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { audioEngine, type AudioCue } from "../audio/audioEngine";
 import { useFarmStore } from "../state/useFarmStore";
 import { deriveIrrigationEvent, type IrrigationStage } from "../state/irrigationEvent";
+import { povWindowActive } from "../scene/dronePov";
 
 const HINT_DURATION_MS = 8_000;
 
 export function SoundToggle() {
-  const [enabled, setEnabled] = useState(audioEngine.isEnabled);
+  const enabled = useFarmStore((s) => s.soundEnabled);
   // hintDismissed 永久标记"已展示过提示"——首次开启或 8s 超时即置真，避免后续反复打扰。
   const [hintDismissed, setHintDismissed] = useState(false);
   const demoStep = useFarmStore((s) => s.demoStep);
@@ -21,10 +26,18 @@ export function SoundToggle() {
   const hintVisible = introComplete && !enabled && !hintDismissed;
   const previousStage = useRef<IrrigationStage>(deriveIrrigationEvent(useFarmStore.getState().irrigationProgress).stage);
   const previousRecovery = useRef(useFarmStore.getState().recoveryPhase);
+  const previousStorm = useRef(useFarmStore.getState().stormProgress);
+  const previousDaylight = useRef("");
+  const previousFpv = useRef(false);
 
-  // Keep the engine's chapter SFX in sync with the demo while sound is on.
+  // Keep the engine's ambience in sync with the demo while sound is on.
   useEffect(() => {
-    if (enabled) audioEngine.setChapter(demoStep);
+    if (enabled) {
+      const state = useFarmStore.getState();
+      audioEngine.setChapter(demoStep);
+      audioEngine.setStorm(state.stormProgress);
+      audioEngine.setDaylight(state.dayPhase, state.stormProgress);
+    }
   }, [demoStep, enabled]);
 
   useEffect(() => {
@@ -49,6 +62,21 @@ export function SoundToggle() {
         previousRecovery.current = state.recoveryPhase;
         if (state.recoveryPhase === "resolved") audioEngine.sfx("recovered");
       }
+      if (state.stormProgress !== previousStorm.current) {
+        previousStorm.current = state.stormProgress;
+        audioEngine.setStorm(state.stormProgress);
+        audioEngine.setDaylight(state.dayPhase, state.stormProgress);
+      }
+      const daylightKey = `${state.dayPhase}|${state.stormProgress < 0.2}`;
+      if (daylightKey !== previousDaylight.current) {
+        previousDaylight.current = daylightKey;
+        audioEngine.setDaylight(state.dayPhase, state.stormProgress);
+      }
+      const fpvActive = state.demoStep === "drone-scan" && povWindowActive(state.scanProgress);
+      if (fpvActive !== previousFpv.current) {
+        previousFpv.current = fpvActive;
+        audioEngine.setMotorBoost(fpvActive);
+      }
     });
   }, [enabled]);
 
@@ -62,10 +90,15 @@ export function SoundToggle() {
   const toggle = useCallback(() => {
     if (!audioEngine.isInitialised) audioEngine.init();
     const next = !audioEngine.isEnabled;
-    setEnabled(next);
     if (next) setHintDismissed(true);
     void audioEngine.setEnabled(next);
-    if (next) audioEngine.setChapter(useFarmStore.getState().demoStep);
+    useFarmStore.getState().setSoundEnabled(next);
+    if (next) {
+      const state = useFarmStore.getState();
+      audioEngine.setChapter(state.demoStep);
+      audioEngine.setStorm(state.stormProgress);
+      audioEngine.setDaylight(state.dayPhase, state.stormProgress);
+    }
   }, []);
 
   return (

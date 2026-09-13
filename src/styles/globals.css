@@ -173,6 +173,7 @@ button { color: inherit; }
    z-index 60 高于字幕/timecut，纯电影感裁切。CSS transition 取代 gsap——简单的 height
    动画不需要时间轴库，且不增加首屏 JS。 */
 .letterbox { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.lightning-flash { position: fixed; inset: 0; z-index: 59; pointer-events: none; background: #dfe9ff; opacity: var(--lightning-flash, 0); }
 .letterbox::before, .letterbox::after { content: ""; position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 600ms cubic-bezier(.2,.8,.2,1); }
 .letterbox::before { top: 0; }
 .letterbox::after { bottom: 0; }
@@ -188,6 +189,9 @@ button { color: inherit; }
 /* 跳过开场按钮（fv-66y.13）：嵌在 intro-caption 下方，规范 §"必须提供跳过开场"。 */
 .intro-caption .intro-skip { margin-top: 6px; padding: 5px 12px; border: 1px solid rgba(247,232,214,.32); border-radius: 999px; background: rgba(8,16,14,.5); color: rgba(247,232,214,.82); font: 500 11px/1 ui-sans-serif, system-ui; letter-spacing: .04em; cursor: pointer; transition: background 160ms ease, color 160ms ease; }
 .intro-caption .intro-skip:hover { background: rgba(247,232,214,.16); color: #fff; }
+.intro-caption .intro-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.intro-caption .intro-sound { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px solid rgba(99,199,194,.42); border-radius: 999px; background: rgba(47,132,113,.34); color: #dffaf3; font: 500 11px/1 ui-sans-serif, system-ui; letter-spacing: .04em; cursor: pointer; transition: background 160ms ease; }
+.intro-caption .intro-sound:hover { background: rgba(47,132,113,.56); }
 
 /* 音效可发现性提示（fv-66y.13）：开场后 ~8s 内、未开启时在 toggle 左侧脉冲。 */
 .sound-hint { position: fixed; right: 50px; top: 12px; z-index: 40; height: 32px; padding: 0 12px 0 10px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(150,214,196,.32); border-radius: 16px; background: rgba(8,16,14,.78); color: #cfe8dd; font: 500 11px/1 ui-sans-serif, system-ui; white-space: nowrap; pointer-events: none; animation: sound-hint-pulse 1.8s ease-in-out infinite; }

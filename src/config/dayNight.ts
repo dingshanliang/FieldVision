@@ -113,8 +113,10 @@ export const DAY_PHASE_LIGHTING: Record<DayPhase, DayPhaseLighting> = {
     sunColor: "#a8c4e8",
     hemiSky: "#33465f",
     hemiGround: "#1c232c",
-    hemiIntensity: 0.32,
-    envIntensity: 0.2,
+    // 夜相地板略高于原始值（0.32/0.2 → 0.38/0.24）：夜章承担叙事镜头后，
+    // 月光+环境光的组合需保证中档机能读出地面轮廓，避免"灯亮地黑"。
+    hemiIntensity: 0.38,
+    envIntensity: 0.24,
     fogColor: "#14222e",
     fogDensity: 0.0011,
     skyZenith: "#0a1526",
@@ -243,8 +245,7 @@ export const currentLighting = {
   bloomBoost: DAWN.bloomBoost,
 };
 
-export function lerpCurrentLighting(target: LightingTargets, alpha: number) {
-  const t = Math.min(1, Math.max(0, alpha));
+export function lerpCurrentLighting(target: LightingTargets, alpha: number) {  const t = Math.min(1, Math.max(0, alpha));
   const mix = (key: keyof LightingTargets) => {
     const from = currentLighting[key] as [number, number, number];
     const to = target[key] as [number, number, number];
@@ -277,3 +278,12 @@ export function lerpCurrentLighting(target: LightingTargets, alpha: number) {
   approach("stars");
   approach("bloomBoost");
 }
+
+/**
+ * 闪电包络（fv-weather 电影化）：storm > 0.75 时由 <Lightning> 以 seeded
+ * 时刻表驱动，值域 0→1。它是 lerp 之后的**加性通道**，不进 LightingTargets
+ * ——阻尼插值会把 100-300ms 的脉冲抹平成"慢闪"，这是它与相位/暴雨目标的
+ * 本质区别。消费端（平行光/半球光/天穹 shader/低档 DOM 微闪）在阻尼写入
+ * 之后叠加读取。
+ */
+export const lightningFlash = { value: 0 };

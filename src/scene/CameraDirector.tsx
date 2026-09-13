@@ -12,6 +12,11 @@ import { gimbalShot, povCutEngaged } from "./dronePov";
 const overview = { position: [210, 86, 223] as const, target: [-8, 2, -18] as const };
 const smartYardOverview = { position: [18, 52, 194] as const, target: [-94, 3, 104] as const };
 const smartPlanOverview = { position: [146, 88, 238] as const, target: [-42, 3, 52] as const };
+// fv-weather 电影化：暴雨两章离开 200 米外的总览机位——雨幕高 78m、总览
+// 高于雨顶俯瞰时雨只读作"远处变灰"。两台低机位进雨幕覆盖区内，贴着东环
+// 路与 A02 风险区，让雨丝、路面积水反光与闪电天穹同框。
+const weatherFrontCloseup = { position: [148, 7.5, -52] as const, target: [55, 2.5, -62] as const };
+const weatherResumeStreet = { position: [136, 13, -34] as const, target: [30, 2, -60] as const };
 // The URL cannot change without a navigation; parse the QA escape hatch once,
 // not on every rendered frame.
 const QA_MODE = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("qa");
@@ -184,7 +189,11 @@ export function CameraDirector() {
         ? smartYardOverview
         : smartFarmChapter === "daily-plan"
           ? smartPlanOverview
-          : overview;
+          : smartFarmChapter === "weather-front"
+            ? weatherFrontCloseup
+            : smartFarmChapter === "weather-resume"
+              ? weatherResumeStreet
+              : overview;
       flyTo(shot.position, shot.target, !REDUCED_MOTION);
       return;
     }

@@ -122,10 +122,12 @@ export function NightLights({ tier }: { tier: PerformanceTier }) {
           renderOrder={5}
         />
       ))}
-      {tier === "high" && (
+      {/* fv-daynight 三段式：泵站两盏真实点光源扩到中档（无阴影，中档可承受），
+          让夜间供水章在中档也读得出"灯下有地"，不再灯亮地黑；低档保持 sprite。 */}
+      {(tier === "high" || tier === "medium") && (
         <>
-          <NightPointLight position={[82, 6.4, 105]} color="#ffd9a0" maxIntensity={34} distance={58} />
-          <NightPointLight position={[-120, 6, 118]} color="#cfe2ff" maxIntensity={22} distance={52} />
+          <NightPointLight position={[82, 6.4, 105]} color="#ffd9a0" maxIntensity={tier === "high" ? 34 : 26} distance={58} />
+          {tier === "high" && <NightPointLight position={[-120, 6, 118]} color="#cfe2ff" maxIntensity={22} distance={52} />}
         </>
       )}
     </group>

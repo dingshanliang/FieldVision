@@ -11,6 +11,7 @@ import { IrrigationTelemetry } from "./IrrigationTelemetry";
 import { EvidenceMap } from "./EvidenceMap";
 import { SpatialEvidence } from "./SpatialEvidence";
 import { Rain } from "./Rain";
+import { Lightning } from "./Lightning";
 import { PhotoModeBridge } from "./PhotoModeBridge";
 import { Terrain } from "./Terrain";
 import { GroundDetails } from "./GroundDetails";
@@ -47,6 +48,7 @@ export function FarmScene() {
     <>
       <Atmosphere />
       <Rain />
+      <Lightning />
       <group onPointerMissed={clearFieldSelection}>
         <Terrain />
         <GroundDetails />

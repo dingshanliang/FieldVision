@@ -10,6 +10,8 @@ import {
   type AutonomousTaskRecord,
   type ConfirmationSource,
 } from "./autonomousTask";
+import { visualConfig } from "../config/visual";
+import type { DayPhase } from "../types/farm";
 
 export const SMART_FARM_CHAPTERS = [
   "base-online",
@@ -42,6 +44,8 @@ export interface SmartFarmChapterSnapshot extends DemoStatePreset {
   dailyOperationPlan: DailyOperationPlan;
   /** 章节进入时的暴雨强度（0 晴 → 1 强对流峰值），直跳与播放共用（fv-weather）。 */
   stormProgress: number;
+  /** 章节进入时的日相（fv-daynight 三段式），直跳与播放共用。 */
+  dayPhase: DayPhase;
 }
 
 const ROUTINE_TASK_IDS = ["SOW-B03", "PATROL-A03", "MAINT-EAST"] as const;
@@ -184,20 +188,20 @@ function taskStateForChapter(chapter: SmartFarmChapter) {
 
   if (chapter === "remote-decision") return tasks;
 
-  if (tasks["IRRIGATE-A02"]) tasks["IRRIGATE-A02"] = confirmTask(tasks["IRRIGATE-A02"], "demo-preset", "2026-06-03T08:35:00+08:00");
+  if (tasks["IRRIGATE-A02"]) tasks["IRRIGATE-A02"] = confirmTask(tasks["IRRIGATE-A02"], "demo-preset", "2026-06-03T17:40:00+08:00");
   tasks = progress(tasks, { "IRRIGATE-A02": 0.62 });
   if (chapter === "irrigation-response") return tasks;
 
   const waterTask = tasks["IRRIGATE-A02"];
   if (waterTask) {
     const completed = completeTask(waterTask, {
-      completedAt: "2026-06-03T09:12:00+08:00",
+      completedAt: "2026-06-03T19:10:00+08:00",
       receipt: "泵闸动作完成，A02 已到水",
     });
     tasks[waterTask.id] = verifyTaskOutcome(completed, {
-      verifiedAt: "2026-06-06T09:20:00+08:00",
-      result: "D1 根区与 D3 冠层复测一致，风险解除",
-      evidenceIds: ["OBS-A02-D1", "OBS-A02-D3"],
+      verifiedAt: "2026-06-04T07:30:00+08:00",
+      result: "D1 根区复测回到目标区间，风险解除",
+      evidenceIds: ["OBS-A02-D1"],
     });
   }
   if (chapter === "outcome-verification") return tasks;
@@ -242,11 +246,11 @@ function taskStateForChapter(chapter: SmartFarmChapter) {
   Object.values(tasks).forEach((task) => {
     if (task.status === "verified") return;
     const completed = completeTask(task, {
-      completedAt: "2026-06-03T10:20:00+08:00",
+      completedAt: "2026-06-06T15:05:00+08:00",
       receipt: `${task.id} 完成并回库`,
     });
     tasks[task.id] = verifyTaskOutcome(completed, {
-      verifiedAt: "2026-06-03T10:22:00+08:00",
+      verifiedAt: "2026-06-06T15:08:00+08:00",
       result: `${task.id} 作业结果已核验`,
       evidenceIds: [`RECEIPT-${task.id}`],
     });
@@ -275,6 +279,20 @@ function stormForChapter(chapter: SmartFarmChapter): number {
   return 0;
 }
 
+/**
+ * fv-daynight 三段式：章节进入时的日相基线。作业日（06-03）清晨推进到
+ * 黄昏决策与夜间供水，次日清晨（06-04 D1）复测，第 3 天（06-06 D3）午后
+ * 强对流过境后收尾。联动供水的夜相可通过 visualConfig.nightIrrigationPhase
+ * 全局降级为 dusk（中档评审逃生开关）。
+ */
+export function dayPhaseForChapter(chapter: SmartFarmChapter): DayPhase {
+  if (chapter === "remote-decision") return "dusk";
+  if (chapter === "irrigation-response") return visualConfig.nightIrrigationPhase;
+  if (chapter === "outcome-verification") return "dawn";
+  if (chapter === "weather-front" || chapter === "weather-resume" || chapter === "return-overview") return "day";
+  return "dawn";
+}
+
 export function getSmartFarmChapterSnapshot(chapter: SmartFarmChapter): SmartFarmChapterSnapshot {
   const visual = legacyPresetForChapter(chapter);
   return {
@@ -283,5 +301,6 @@ export function getSmartFarmChapterSnapshot(chapter: SmartFarmChapter): SmartFar
     tasks: taskStateForChapter(chapter),
     dailyOperationPlan: plan(chapter === "base-online" ? "draft" : chapter === "return-overview" ? "completed" : "confirmed"),
     stormProgress: stormForChapter(chapter),
+    dayPhase: dayPhaseForChapter(chapter),
   };
 }

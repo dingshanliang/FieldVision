@@ -1,3 +1,5 @@
+import type { DayPhase } from "../types/farm";
+
 export const visualConfig = {
   cropDensity: 1,
   windStrength: 0.3,
@@ -16,4 +18,11 @@ export const visualConfig = {
   irrigationDurationSeconds: 15,
   droneSpeed: 0.035,
   riskPulseSpeed: 1.2,
+  /**
+   * 联动供水章节的日相（fv-daynight 三段式）。默认夜幕（泵站泛光下灌溉是
+   * 数字孪生的经典意象）。这是中档真机评审的逃生开关：若中档夜章
+   * "灯亮地黑"，全局切 "dusk" 仍有余晖天光兜底——tier 无关，快照确定性
+   * 不受性能档影响。
+   */
+  nightIrrigationPhase: "night" as DayPhase,
 } as const;
