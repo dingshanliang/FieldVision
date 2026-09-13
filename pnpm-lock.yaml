@@ -9,86 +9,83 @@ importers:
   .:
     dependencies:
       '@fontsource-variable/manrope':
-        specifier: latest
+        specifier: ^5.3.0
         version: 5.3.0
       '@fontsource-variable/newsreader':
-        specifier: latest
+        specifier: ^5.3.0
         version: 5.3.0
       '@react-three/drei':
-        specifier: latest
+        specifier: ^10.7.7
         version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.185.1))(@types/react@19.2.17)(@types/three@0.185.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.185.1)
       '@react-three/fiber':
-        specifier: latest
+        specifier: ^9.6.1
         version: 9.6.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.185.1)
       '@react-three/postprocessing':
-        specifier: latest
+        specifier: ^3.0.4
         version: 3.0.4(@react-three/fiber@9.6.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.185.1))(@types/three@0.185.1)(react@19.2.7)(three@0.185.1)
       camera-controls:
-        specifier: latest
+        specifier: ^3.1.2
         version: 3.1.2(three@0.185.1)
-      gsap:
-        specifier: latest
-        version: 3.15.0
       lucide-react:
-        specifier: latest
+        specifier: ^1.25.0
         version: 1.25.0(react@19.2.7)
       postprocessing:
-        specifier: latest
+        specifier: ^6.39.3
         version: 6.39.3(three@0.185.1)
       react:
-        specifier: latest
+        specifier: ^19.2.7
         version: 19.2.7
       react-dom:
-        specifier: latest
+        specifier: ^19.2.7
         version: 19.2.7(react@19.2.7)
       three:
-        specifier: latest
+        specifier: ~0.185.1
         version: 0.185.1
       zustand:
-        specifier: latest
+        specifier: ^5.0.14
         version: 5.0.14(@types/react@19.2.17)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
     devDependencies:
       '@eslint/js':
-        specifier: latest
+        specifier: ^10.0.1
         version: 10.0.1(eslint@10.7.0)
       '@types/node':
-        specifier: latest
+        specifier: ^26.1.1
         version: 26.1.1
       '@types/react':
-        specifier: latest
+        specifier: ^19.2.17
         version: 19.2.17
       '@types/react-dom':
-        specifier: latest
+        specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.17)
       '@types/three':
-        specifier: latest
+        specifier: ~0.185.1
         version: 0.185.1
       '@vitejs/plugin-react':
-        specifier: latest
+        specifier: ^6.0.3
         version: 6.0.3(vite@8.1.5(@types/node@26.1.1))
       eslint:
-        specifier: latest
+        specifier: ^10.7.0
         version: 10.7.0
       eslint-plugin-react-hooks:
-        specifier: latest
+        specifier: ^7.1.1
         version: 7.1.1(eslint@10.7.0)
       eslint-plugin-react-refresh:
-        specifier: latest
+        specifier: ^0.5.3
         version: 0.5.3(eslint@10.7.0)
       globals:
-        specifier: latest
+        specifier: ^17.7.0
         version: 17.7.0
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
       typescript-eslint:
-        specifier: latest
+        specifier: ^8.64.0
         version: 8.64.0(eslint@10.7.0)(typescript@5.9.3)
       vite:
-        specifier: latest
+        specifier: ^8.1.5
         version: 8.1.5(@types/node@26.1.1)
       vitest:
-        specifier: latest
+        specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1))
 
 packages:
@@ -799,9 +796,6 @@ packages:
 
   glsl-noise@0.0.0:
     resolution: {integrity: sha512-b/ZCF6amfAUb7dJM/MxRs7AetQEahYzJ8PtgfrmEdtw6uyGOr+ZSGtgjFm6mfsBkxJ4d2W7kg+Nlqzqvn3Bc0w==}
-
-  gsap@3.15.0:
-    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   hermes-estree@0.25.1:
     resolution: {integrity: sha512-0wUoCcLp+5Ev5pDW2OriHC2MJCbwLwuRx+gAqMTOkGKJJiBCLjtrvy4PWUGn6MIVefecRpzoOZ/UV6iGdOr+Cw==}
@@ -2123,8 +2117,6 @@ snapshots:
   globals@17.7.0: {}
 
   glsl-noise@0.0.0: {}
-
-  gsap@3.15.0: {}
 
   hermes-estree@0.25.1: {}
 
