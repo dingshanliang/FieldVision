@@ -7,7 +7,7 @@ import { resolveLightingTargets } from "../config/dayNight";
 import { useFarmStore } from "../state/useFarmStore";
 import { povCutEngaged } from "./dronePov";
 import { sceneComposer } from "./composerBridge";
-import { sunDiscMesh } from "./SunDiscMesh";
+import { sunDiscMesh } from "./sunDisc";
 
 /** Cinematic shallow focus for the close-up beats; wide shots stay fully sharp. */
 function dofPreset(viewMode: string, demoStep: string) {
